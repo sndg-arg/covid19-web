@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>{{object.scientific_name}}</h1>
+<a href="https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id={{object.ncbi_taxon_id}}">
+    NCBI Taxon: {{object.ncbi_taxon_id}}</a>
+
+<ul>
+{% for k,v in object.other_names.items  %}
+
+<li><b>{{k}}</b>: {{v}} </li>
+
+{% endfor %}
+</ul>
+
+Lineaje:
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+  {% for p in object.parents reversed  %}
+    <li class="breadcrumb-item active" aria-current="page">
+        <a href="{% url 'biosql:tax_view' p.ncbi_taxon_id %}"> {{p.scientific_name}} </a> </li>
+  {% endfor %}
+  </ol>
+</nav>
+
+
+{% if object.children %}
+Hijos:
+<ul>
+{% for c in object.children.all %}
+   <li>
+        <a href="{% url 'biosql:tax_view' c.ncbi_taxon_id %}"> {{c.scientific_name}} </a> </li>
+{% endfor %}
+</ul>
+{% endif %}
+
+{% endblock %}
+

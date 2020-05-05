@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% load static %}
+{% load i18n %}
+
+
+{% block head %}
+
+{% endblock %}
+
+{% block header %}
+{% include "header.html" with class="bg-maiz" section_name="Genome"%}
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-12">
+
+    <h1>COVID 19</h1>
+
+  </div>
+</div>
+<div class="row">
+
+  <!--                <iframe  id="jbrowse"-->
+  <!--                 src="{% static 'jbrowse' %}/index.html?data=data/{{object.name}}&fullviewlink=false&menu=false&nav=true&tracklist=false&tracks=DNA,Genes"-->
+  <!--                 height="400px" width="100%"></iframe>-->
+
+  <div class="row">
+    <h3>{% trans 'Genes' %}</h3>
+
+    <table id="genes_table" class="table table-responsive">
+      <thead>
+      <tr>
+
+        <td>{% trans 'Gene Name' %}</td>
+        <td>{% trans 'Description' %}</td>
+        <td>{% trans 'Region' %}</td>
+        <td>{% trans 'Description' %}</td>
+        <td>{% trans 'Structure' %}</td>
+
+      </tr>
+      </thead>
+      <tbody>
+      {% for c in genes %}
+      <tr>
+
+        <td>{{c.qualifiers_dict.gene}}</td>
+        <td>
+          {% if c.qualifiers_dict.BioentryId %}
+          <a href="{% url 'covid:gene_view' c.qualifiers_dict.BioentryId %}"> {{c.locus_tag}} </a>
+          {% else %}
+          {{c.locus_tag}} /  {{c.type_term.identifier}}
+          {%endif%}
+        </td>
+        <td>{{c.first_location}}</td>
+        <td> {{c.description}} </td>
+        <td>{{c.extra_gene_props.structures}}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+
+</div>
+
+{% endblock %}

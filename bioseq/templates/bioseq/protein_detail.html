@@ -1,0 +1,368 @@
+{% extends "base.html" %}
+
+{% load static %}
+{% load bioresources_extras %}
+
+
+{% block head %}
+
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+
+
+<script type="application/javascript" src="{% static 'sequence-viewer.min.js' %}"></script>
+
+
+{# <link rel="stylesheet" type="text/css" href="https://cdn.rawgit.com/calipho-sib/feature-viewer/v1.0.0/dist/feature-viewer.min.css"> #}
+
+
+
+<script src="https://cdn.rawgit.com/calipho-sib/feature-viewer/v1.0.0/dist/feature-viewer.bundle.js"></script>
+
+<script src="{% static 'ols-graphview.js' %}" ></script>
+
+
+
+
+{% endblock %}
+
+
+{% block sidebarleft %}
+
+<div class="col-md-2 bg-light">
+<nav class="d-none d-md-block sidebar" style="position: fixed;margin-top: 0px">
+
+
+<div class="sidebar-sticky">
+    <a class="justify-content-between align-items-center px-3 mt-4 mb-1 btn"
+              href="#function">General</a>
+</div>
+
+ <div class="sidebar-sticky">
+    <a class="justify-content-between align-items-center px-3 mt-4 mb-1 btn {% if not functions.biological_process and not functions.molecular_function %} disabled{% endif %}"
+              href="#function">Función</a>
+</div>
+
+ <div class="sidebar-sticky">
+ <a class="justify-content-between align-items-center px-3 mt-4 mb-1 btn {% if not functions.cellular_component %} disabled{% endif %}"
+              href="#localization">Localización Celular</a>
+              </div>
+
+
+<div class="sidebar-sticky">
+ <a class="justify-content-between align-items-center px-3 mt-4 mb-1  btn{% if not functions.other %} disabled{% endif %}"
+              href="#other">Otros</a></div>
+
+<div class="sidebar-sticky">
+ <a class="justify-content-between align-items-center px-3 mt-4 mb-1  btn{% if not structures %} disabled{% endif %}"
+              href="#structure">Estructura</a></div>
+<div class="sidebar-sticky">
+ <a class="justify-content-between align-items-center px-3 mt-4 mb-1 btn {% if not annotations %} disabled{% endif %}"
+              href="#annotation">Anotación</a></div>
+<div class="sidebar-sticky">
+ <a class="justify-content-between align-items-center px-3 mt-4 mb-1 btn"
+              href="#sequence">Secuencia</a></div>
+<div class="sidebar-sticky">
+ <a class="justify-content-between align-items-center px-3 mt-4 mb-1 btn"
+              href="#gen_ctx">Contexto Génico</a></div>
+ <div class="sidebar-sticky">
+  <a class="justify-content-between align-items-center px-3 mt-4 mb-1 btn"
+               href="#vers">Versiones</a></div>
+
+
+</nav>
+</div>
+{% endblock %}
+
+
+{% block content %}
+
+
+
+
+
+
+
+   <h1>{{ object.accession }}</h1>
+<table class="table  table-responsive">
+
+<tr><td><b>Locus Tag</b></td><td>{{ object.accession }}</td></tr>
+<tr><td><b>Descripción</b></td><td>
+
+{% for k,v in feature.qualifiers_dict.items %}
+{% if k in "product note" %}
+{{ v }} <br />
+{% endif %}
+{% endfor %}
+
+</td></tr>
+<tr><td><b>Organismo</b></td><td><a href="{% url 'bioresources:assembly_view2' accession %}"> {{ accession }}</a></td></tr>
+<tr><td><b>Taxon</b></td><td> <a href="{% url 'biosql:tax_view' taxon.ncbi_taxon_id %}"> {{ taxon.scientific_name }} </a> </td></tr>
+<tr><td><b>Names/Genes</b></td><td>
+{% for k,v in feature.qualifiers_dict.items %}
+{% if k in "protein_id old_locus_tag gene" %}
+{{ v }} <br />
+{% endif %}
+{% endfor %}
+</td></tr>
+
+
+</table>
+
+{% if functions.biological_process or functions.molecular_function %}
+<h3 id="function">Función</h3>
+
+{% if functions.biological_process %}
+<h4>Biological Process</h4>
+
+<ul>
+{% for q in functions.biological_process %}
+<li><a href="https://www.ebi.ac.uk/ols/ontologies/go/terms?iri=http://purl.obolibrary.org/obo/{{q.identifier|replace:":|_"}}">{{q.name}}</a></li>
+{% endfor %}
+</ul>
+
+{% endif %}
+
+{% if functions.molecular_function %}
+<h4>Molecular Function/s</h4>
+<ul>
+{% for q in functions.molecular_function %}
+<li><a href="https://www.ebi.ac.uk/ols/ontologies/go/terms?iri=http://purl.obolibrary.org/obo/{{q.identifier|replace:":|_"}}">{{q.name}}</a></li>
+{% endfor %}
+</ul>
+{% endif %}
+
+{% endif %}
+
+
+{% if functions.cellular_component %}
+<h3 id="localization">Localización Celular</h3>
+<ul>
+{% for q in functions.cellular_component %}
+<li><a href="https://www.ebi.ac.uk/ols/ontologies/go/terms?iri=http://purl.obolibrary.org/obo/{{q.identifier|replace:":|_"}}">{{q.name}}</a></li>
+{% endfor %}
+</ul>
+<div id="ontology_vis" style="display:None;height: 500px"></div>
+<script>
+const  webserviceURL = "https://www.ebi.ac.uk/ols/api/ontologies/go/terms?iri=";
+const tmpnetworkOptions={ webservice : {URL: webserviceURL, OLSschema:true},
+        //loadingBar:{pictureURL:"../../../img/loading1.gif"}
+         displayOptions : {showButtonBox:false, showInfoWindow:false, showLegend:false,showListOfExtendedNodes:false},
+        }
+
+        $(document).ready(function () {
+             // let terms = '{% for q in functions.cellular_component %}{{q.identifier}} {% endfor %}';
+             // var term= "http://purl.obolibrary.org/obo/" + terms.split(" ")[0].replace(":","_") ;
+             //
+             //      var app = require("ols-graphview");
+             //      var instance = new app();
+             //      instance.visstart("ontology_vis", term, tmpnetworkOptions,{});
+             //      $("#vis-network").css("heigth",500);
+             //      const fetchUri = 'https://www.ebi.ac.uk/ols/api/ontologies/go/terms/' + escape(encodeURIComponent( 'http://purl.obolibrary.org/obo/'));
+             //      instance.fetchNewGraphData(fetchUri + terms.split(" ")[1].replace(":","_") + '/graph'  );
+             //      instance.getNetwork().on('stabilized',function(params){
+             //          const nx = instance.getNetwork();
+             //         console.log(params)
+             //      });
+
+
+        });
+
+
+
+</script>
+{% endif %}
+
+
+{% if functions.other %}
+<h3 id="other">Otros</h3>
+
+{% endif %}
+
+{% if structure %}
+<h3 id="structure">Estructura</h3>
+
+<table class="table table-responsive" width="100%">
+{% for feature in object.features.all %}
+
+    {% if feature.type_term.identifier == 'SO:0001079' %}
+<tr>
+<td>homology </td><td>{{feature.dbxrefs.all|first|getattribute:"dbxref"|getattribute:"accession"}}</td>
+<td>{{feature.source_term.name}}</td>
+<td>{{feature.locations.all|first|getattribute:"start_pos" }}</td><td>{{feature.locations.all|first|getattribute:"end_pos" }}</td>
+</tr>
+    {% endif %}
+
+{% endfor %}
+</table>
+{% endif %}
+
+{% if annotation %}
+<h3 id="annotation">Anotación</h3>
+<table class="table table-responsive" width="100%">
+{% for feature in object.features.all %}
+{% with nofeatures='SO:0001079' %}
+    {% if feature.type_term.identifier not in nofeatures.split %}
+<tr>
+<td>{{feature.type_term.ontology.name}}</td><td>{{feature.type_term.identifier}}</td>
+<td>{{feature.type_term.definition}}</td><td>{{feature.source_term.name}}</td>
+<td>{{feature.locations.all|first|getattribute:"start_pos" }}</td><td>{{feature.locations.all|first|getattribute:"end_pos" }}</td>
+</tr>
+    {% endif %}
+{% endwith %}
+{% endfor %}
+</table>
+
+{% endif %}
+
+<h3 id="sequence">Secuencia AA</h3>
+
+<div id="protein-sequence-viewer"></div>
+<div id="protein-features-viewer"></div>
+
+<script>
+var seq1 = new Sequence('{{object.seq.seq}}');
+
+seq1.render('#protein-sequence-viewer', {
+  'showLineNumbers': true,
+  'wrapAminoAcids': true,
+  'charsPerLine': 50,
+  'toolbar': false,
+  'search': false,
+  'title' : "{{object.accession}}",
+  'sequenceMaxHeight': "300px",
+  'badge': true
+});
+
+var ft2 = new FeatureViewer("{{object.seq.seq}}","#protein-features-viewer", {
+    showAxis: true,
+    showSequence: true,
+    brushActive: true,
+    toolbar:true,
+    bubbleHelp:false,
+    zoomMax:10
+            });
+
+
+// ft2.addFeature({
+//     data: [{x:20,y:32},{x:46,y:100},{x:123,y:167}],
+//     name: "test feature 1",
+//     className: "test1",
+//     color: "#005572",
+//     type: "rect",
+//     filter: "type1"
+// });
+// ft2.addFeature({
+//     data: [{x:52,y:52},{x:92,y:92}],
+//     name: "test feature 2",
+//     className: "test2",
+//     color: "#006588",
+//     type: "rect",
+//     filter: "type2"
+// });
+// ft2.addFeature({
+//     data: [{x:130,y:184},{x:40,y:142},{x:80,y:110}],
+//     name: "test feature 3",
+//     className: "test3",
+//     color: "#eda64f",
+//     type: "path",
+//     filter: "type2"
+// });
+// ft2.addFeature({
+//     data: [{x:120,y:154},{x:21,y:163},{x:90,y:108},{x:10,y:25},{x:193,y:210},{x:78,y:85},{x:96,y:143},{x:14,y:65},{x:56,y:167}],
+//     name: "test feature 4",
+//     className: "test4",
+//     color: "#F4D4AD",
+//     type: "rect",
+//     height: 8,
+//     filter: "type1"
+// });
+// var dataDemo = [];
+// for (var i=1;i<100;i++) {
+//     var count = Math.floor((Math.random() * 20) + 1);
+//     dataDemo.push({
+//         x: i*2,
+//         y:count
+//     })
+// }
+// ft2.addFeature({
+//     data: dataDemo,
+//     name: "test feature 5",
+//     className: "test5",
+//     color: "#008B8D",
+//     type: "line",
+//     filter: "type2",
+//     height: "5"
+// });
+{% for ftype, locations in object.groupedFeatures.items %}
+ft2.addFeature({
+    data: [
+        {% for location in locations %}
+        {x:{{location.start_pos}},y:{{location.end_pos}},description:"",id:""},
+        {% endfor %}
+    ],
+    name: "{{ftype}}",
+    className: "test6",
+    color: "#81BEAA",
+    type: "rect",
+    filter: "type2"
+});
+
+{% endfor %}
+
+//Get and print in the browser console the position of the feature selected
+ft2.onFeatureSelected(function (d) {
+    console.log(d.detail);
+});
+
+//Get and print in the browser console the zoom level and coordinates
+ft2.onZoom(function (d) {
+    console.log(d.detail);
+});
+
+//functions to zoom programmatically
+zoomIn = function(){
+ ft2.zoom(40,80);
+};
+zoomOut = function(){
+ ft2.resetZoom();
+};
+
+//add buttons for programmatic zoom
+var buttonZoom = '<a class="btn btn-info btnZoom" onclick="zoomIn()">ZOOM between 40 and 80</a>';
+var buttonResetZoom = '<a class="btn btn-info btnZoom" onclick="zoomOut()">Reset ZOOM</a>';
+
+$("#protein-features-viewer").append("<p class='btnBlock'>"+buttonZoom+buttonResetZoom+"</p");
+
+</script>
+
+<h3 id="gen_ctx">Contexto Génico</h3>
+
+ <iframe  id="jbrowse"
+ src="{% static 'jbrowse' %}/index.html?data=data/H37Rv&fullviewlink=false&menu=false&nav=true&tracklist=false&highlight=NC_000962.3:{{start|add:500}}..{{end|add:500}}&loc=NC_000962.3:{{start}}..{{end}}&"
+ height="400px" width="100%"></iframe>
+
+
+<div id="protein-sequence-viewer2"></div>
+
+<script>
+var seq1 = new Sequence('{{seq.seq}}');
+
+seq1.render('#protein-sequence-viewer2', {
+  'showLineNumbers': true,
+  'wrapAminoAcids': true,
+  'charsPerLine': 100,
+  'toolbar': false,
+  'search': false,
+  'title' : "{{object.accession}}",
+  'sequenceMaxHeight': "300px",
+  'badge': true
+});
+</script>
+
+<h3 id="vers">Versiones</h3>
+
+
+
+
+{% endblock %}

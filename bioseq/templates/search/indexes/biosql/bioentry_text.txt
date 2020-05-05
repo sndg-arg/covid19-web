@@ -1,0 +1,7 @@
+{{ object.name }}
+{{ object.taxon }}
+{{ object.type }}
+{{ object.genes | join:" " }}
+{{ object.intraspecific_name }}
+{{ object.subcellular_location }}
+{{ object.function }}

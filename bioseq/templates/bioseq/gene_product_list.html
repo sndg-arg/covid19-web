@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% load static %}
+{% load bioresources_extras %}
+{% load i18n %}
+
+{% block head %}
+
+
+{% endblock %}
+
+{% block content %}
+
+
+
+<div class="row">
+<div class="col-md-8">
+
+<h3>{% trans 'Filters' %}</h3>
+
+<table class="table table-responsive">
+<thead>
+</thead>
+<tbody>
+{% for f in filters %}
+    <tr><td>f.display</td><td>f.value</td></tr>
+{% endfor %}
+</tbody>
+</table>
+
+<h3>{% trans 'Results' %}</h3>
+<table class="table table-responsive">
+<thead>
+<tr><td></td><td>{% trans 'Feature Type' %} </td><td>{% trans 'Description' %} </td>
+<td>{% trans 'Locus Tag' %} </td><td>{% trans 'Location' %} </td><td>{% trans 'Aliases' %} </td>
+
+
+
+</tr>
+</thead>
+<tbody>
+{% for o in objects %}
+<tr>
+
+<td>{{o.idx}}</td>
+<td>{{o.ftype}}</td>
+<td>{{o.product}}</td>
+<td>{{o.lt}}</td>
+<td>{{o.location}}</td>
+<td>{{o.genes}}</td>
+
+
+</tr>
+{% endfor %}
+
+
+</tbody>
+</table>
+</div>
+</div>
+
+<div class="col-md-6">
+                <h3>Search <strong>{{page_obj.paginator.count}}</strong> results </h3>
+               </div>
+                <div class="col-md-6">
+                <nav aria-label="Page navigation">
+                {{page_obj}}
+                    <ul class="pagination justify-content-left">
+                      <li class="page-item"><a class="page-link" href="?page=1&q={{query}}&{{params|qs_without_parameter:'page'}}">First</a></li>
+                      {% if page_obj.has_previous %}
+                      <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{params|qs_without_parameter:'page'}}">&laquo;</a></li>
+                      {% else %}
+                      <li class="page-item disabled"><a class="page-link" href="#"><span>&laquo;</span></a></li>
+                      {% endif %}
+                      {% for i in page_obj.paginator.show_pages %}
+                      {% if page_obj.number == i %}
+                      <li class="page-item active"><a class="page-link" href="#">{{ i }} <span class="sr-only">(current)</span></a></li>
+                      {% else %}
+                      <li class="page-item"><a class="page-link" href="?page={{ i }}&{{params|qs_without_parameter:'page'}}">{{ i }}</a></li>
+                      {% endif %}
+                      {% endfor %}
+                      {% if page_obj.has_next %}
+                      <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&{{params|qs_without_parameter:'page'}}">&raquo;</a></li>
+                      <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages}}&{{params|qs_without_parameter:'page'}}">Last</a></li>
+                      {% else %}
+                      <li class="page-item disabled"><a class="page-link" href="#"><span>&raquo;</span></a></li>
+                      {% endif %}
+
+                    </ul>
+                    </nav>
+
+
+
+
+{% endblock %}

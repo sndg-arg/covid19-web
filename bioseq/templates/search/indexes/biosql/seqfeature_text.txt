@@ -1,0 +1,10 @@
+{{ object.name }}
+{{ object.description }}
+{{ object.type }}
+{{ object.related_author_names | join:" " }}
+{{ object.related_org_names | join:" " }}
+{{ object.intraspecific_name }}
+{{ object.species_name }}
+{{ object.level }}
+{{ object.assembly_type }}
+{{ object.ncbi_tax_keywords }}

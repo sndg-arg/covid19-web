@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% load static %}
+{% load i18n %}
+{% load bioresources_extras %}
+
+
+{% block head %}
+
+
+<link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.19/css/jquery.dataTables.min.css"/>
+
+{% endblock %}
+
+{% block content %}
+
+   <h1>{{ object.accession }}</h1>
+<table class="table  table-responsive">
+
+<tr><td><b>Name</b></td><td>{{ object.name }}</td></tr>
+{% if object.description %}
+<tr><td><b>Descripción</b></td><td>{{ object.description }}</td></tr>
+{% endif %}
+
+<tr><td><b>Especie</b></td><td>{{ object.species_name }}</td></tr>
+<tr><td><b>IntraEspecie</b></td><td>{{ object.intraspecific_name }}</td></tr>
+
+<tr><td><b>Nivel</b></td><td>{{object.level}}</td></tr>
+
+
+<tr><td><b>Tipo</b></td><td>{{ object.assembly_type }}</td></tr>
+<tr><td><b>Taxon</b></td><td>
+{% if object.ncbi_tax %}
+<a href="{% url 'biosql:tax_view' object.ncbi_tax.ncbi_taxon_id %}">{{ object.ncbi_tax.scientific_name }}</a>
+{% else %}
+...
+{% endif %}
+</td></tr>
+
+
+<tr><td colspan="2">
+<a href="{% url 'biosql:protein_list' object.biodatabase_id %}">Proteinas</a>
+</td></tr>
+
+
+</table>
+
+<iframe  id="jbrowse"
+ src="{% static 'jbrowse' %}/index.html?data=data/SNDG_POF&fullviewlink=false&menu=false&nav=true&tracklist=false&loc=NC_000962.3:0..999&"
+ height="400px" width="100%"></iframe>
+
+<div class="row">
+<div class="col-md-8">
+
+<h3>{% trans "Sequences" %}</h3>
+
+
+<table id="contig_table" class="table table-responsive">
+<thead>
+<tr><td>ID</td><td>Length</td>
+
+{% with feature_types='mRNA tRNA rRNA regulatory ncRNA' %}
+{% for x in feature_types.split %}
+<td>{{x}}</td>
+{% endfor %}
+{% endwith %}
+
+</tr>
+</thead>
+<tbody>
+{% if page_obj %}
+{% paginator query page_obj request.GET %}
+{% endif %}
+{% for c in contigs %}
+<tr>
+<td><a href="{% url 'biosql:seq_view' c.bioentry_id %}"> {{c.accession}}</a></td>
+<td>{{lengths|getattribute:c.accession}}</td>
+
+{% with feature_types='mRNA tRNA rRNA regulatory ncRNA' %}
+{% for x in feature_types.split %}
+<td>{{c.feature_counts|getattribute:x|default:"0" }}</td>
+{% endfor %}
+{% endwith %}
+</tr>
+{% endfor %}
+
+
+</tbody>
+</table>
+
+
+</div>
+</div>
+
+
+
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+<script type="text/javascript" src="//cdn.datatables.net/1.10.19/js/jquery.dataTables.min.js"></script>
+{% if not page_obj %}
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('#contig_table').DataTable();
+    } );
+</script>
+{% endif %}
+
+{% endblock %}

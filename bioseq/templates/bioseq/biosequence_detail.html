@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% load static %}
+{% load bioresources_extras %}
+
+
+{% block head %}
+
+
+{% endblock %}
+
+
+
+{% block content %}
+
+
+   <h1>{{ object.accession }}</h1>
+<table class="table  table-responsive">
+
+<tr><td><b>Locus Tag</b></td><td>{{ object.accession }}</td></tr>
+{% for q in object.qualifiers.all %}
+{% if q.term.name in "sequence_version topology date_changed" %}
+<tr><td><b>{{ q.term.name|replace:"_| "|capfirst }}</b></td><td>
+{{q.value}}
+</td></tr>
+{% endif %}
+{% endfor %}
+<tr><td><b>Organismo</b></td><td><a href="{% url 'biosql:assembly_view' object.biodatabase_id %}">{{ object.biodatabase.name }}</a></td></tr>
+{% if object.taxon %}
+<tr><td><b>Taxon</b></td><td><a href="{% url 'biosql:tax_view' object.taxon.ncbi_taxon_id %}">{{ object.taxon.scientific_name }}</a></td></tr>
+{% endif %}
+</table>
+
+<h3>Anotaciones</h3>
+<a href="#">Listar Anotaciones / productos génicos </a>
+<table class="table  table-responsive">
+<thead>
+<tr><td>Total</td>
+{% for name,count in object.feature_counts.items %}
+{% if name != "source" %}
+<td>{{name}}</td>
+{% endif %}
+{% endfor %}
+</tr>
+</thead>
+<tbody>
+<tr><td>{{object.features.all|length}}</td>
+{% for name,count in object.feature_counts.items %}
+{% if name != "source" %}
+<td>{{count}}</td>
+{% endif %}
+{% endfor %}
+</tr>
+</tbody>
+</table>
+
+
+
+ <iframe  id="jbrowse"
+ src="{% static 'jbrowse' %}/index.html?data=data/H37Rv&fullviewlink=false&menu=false&nav=true&tracklist=false&loc=NC_000962.3:0..999&"
+ height="400px" width="100%"></iframe>
+
+
+
+
+{% endblock %}
