@@ -1,0 +1,5 @@
+[run]
+include = sndg_covid19/*
+omit = *migrations*, *tests*
+plugins =
+    django_coverage_plugin

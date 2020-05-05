@@ -1,0 +1,33 @@
+{
+  "name": "covid19",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "webpack --config webpack.config.js"
+  },
+  "dependencies": {
+    "bootstrap": "^4.1",
+    "bootstrap-tour": "^0.12.0",
+    "chart.js": "^1.1.1",
+    "child_process": "^1.0.2",
+    "css-loader": "^3.5.2",
+    "d3": "^5.16.0",
+    "feature-viewer": "^0.1.44",
+    "jquery": "^3.3",
+    "msa": "^1.0.3",
+    "phylocanvas": "^2.8.1",
+    "phylocanvas-plugin-metadata": "^2.2.0",
+    "popper.js": "^1.16.1",
+    "query-string": "^4.3.2",
+    "sequence-viewer": "^0.2.18",
+    "ngl": "^0.10.4",
+    "datatables.net": "^1.10.20",
+    "datatables.net-dt": "^1.10.20"
+  },
+  "devDependencies": {
+    "file-loader": "^4.2.0",
+    "style-loader": "^1.0.0",
+    "url-loader": "^2.1.0",
+    "webpack": "^4.41.0",
+    "webpack-cli": "^3.3.9"
+  }
+}
