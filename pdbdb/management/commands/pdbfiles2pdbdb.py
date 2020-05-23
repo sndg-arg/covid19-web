@@ -21,8 +21,8 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         pdbs = PDBs()
-        parser.add_argument('--pdbs_dir', required=True)
-        parser.add_argument('--entries_path', required=True)
+        parser.add_argument('--pdbs_dir', default="data/pdb/")
+        parser.add_argument('--entries_path', default="data/pdb/entries.idx")
         parser.add_argument('--only_annotated', action='store_false')
         parser.add_argument('--entries_url', default=pdbs.url_pdb_entries)
 
@@ -48,11 +48,14 @@ class Command(BaseCommand):
         with tqdm(pdbs) as pbar:
             for code,pdb_path in pbar:
                 code = code.lower()
-                pdb_path = pdb2sql.download(code)
+                try:
+                    pdb_path = pdb2sql.download(code)
+                except:
+                    self.stderr.write("PDB %s could not be downloaded" % code)
+                    continue
 
                 if PDB.objects.filter(code=code).exists():
-                    if options["verbose"]:
-                        self.stderr.write("PDB %s already exists" % code)
+                    self.stderr.write("PDB %s already exists" % code)
                     continue
 
                 pbar.set_description(code)

@@ -12,6 +12,7 @@ from django.db import models
 class PDB(models.Model):
     id = models.AutoField(primary_key=True)
     code = models.CharField(max_length=100)
+    header = models.TextField(null=True)
     resolution = models.FloatField(default=20)
     experiment = models.CharField(max_length=100, null=True)
     taxon = models.ForeignKey(Taxon, models.SET_NULL, related_name="structures", null=True)
@@ -24,6 +25,18 @@ class PDB(models.Model):
 
     def __str__(self):
         return self.code
+
+    def max_druggability_pocket(self):
+        pockets = []
+        for rs in self.residue_sets.all():
+            if rs.residue_set.name == PDBResidueSet.pocket_name:
+                pockets.append(rs)
+
+        if pockets:
+            pockets = sorted(pockets, key=lambda rs: rs.properties_dict()[Property.druggability])
+            return pockets[-1]
+        else:
+            return None
 
     def lines(self):
         # http://www.wwpdb.org/documentation/file-format-content/format33/sect9.html#ATOM
@@ -57,7 +70,7 @@ class Residue(models.Model):
         return [a.line(self) for a in self.atoms.all()]
 
     def __str__(self):
-        return self.pdb.code  + "_" + self.chain  + ":" + str(self.resid) + "-" + self.resname
+        return self.pdb.code + "_" + self.chain + ":" + str(self.resid) + "-" + self.resname
 
     class Meta:
         unique_together = (('pdb', "chain", "resid", "icode", "type"),)
@@ -81,15 +94,15 @@ class Atom(models.Model):
     element = models.CharField(max_length=10)
 
     def __str__(self):
-        return str(self.serial) + "-" + self.name + "-" +  str(self.residue)
+        return str(self.serial) + "-" + self.name + "-" + str(self.residue)
 
-    def line(self,r):
+    def line(self, r):
         if r.type == "R":
             line = "ATOM  "  # 1 -  6        Record name   "ATOM  "
         else:
             line = "HETATM"  # 1 -  6        Record name   "ATOM  "
 
-        line += str(self.serial ).rjust(5)  # 7 - 11        Integer       serial       Atom  serial number.
+        line += str(self.serial).rjust(5)  # 7 - 11        Integer       serial       Atom  serial number.
         if r.resname == "STP":
             line += " "
             line += self.name.strip().ljust(4)  # 13 - 16        Atom          name         Atom name.
@@ -132,6 +145,8 @@ class ResidueSet(models.Model):
 
 
 class PDBResidueSet(models.Model):
+    pocket_name = "FPocketPocket"
+
     id = models.AutoField(primary_key=True)
     pdb = models.ForeignKey(PDB, related_name='residue_sets',
                             db_column="pdb_id", on_delete=models.CASCADE)
@@ -141,6 +156,13 @@ class PDBResidueSet(models.Model):
 
     class Meta:
         unique_together = (('pdb', "residue_set", "name"),)
+
+    def properties_dict(self):
+        if not hasattr(self, "_properties_dict"):
+            self.__properties_dict = {}
+            for p in self.properties.all():
+                self.__properties_dict[p.property.name] = p.value
+        return self.__properties_dict
 
 
 class ResidueSetResidue(models.Model):
@@ -165,6 +187,8 @@ class AtomResidueSet(models.Model):
 
 
 class Property(models.Model):
+    druggability = 'druggability_score'
+
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, default="")

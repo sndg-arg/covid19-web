@@ -17,18 +17,26 @@ import subprocess as sp
 from tqdm import tqdm
 import json
 
+"""
+    Template to add click to trackList.json
+
+    "onClick" : {
+          "url" : "function(evt) {  debugger;window.parent.location.href =  window.parent.location.href.split('genome/')[0] + '/genome/BR_Mal/gene/' + this.feature.get('locus_tag') + '/'; }",
+          "label" : "go to product"
+        }
+"""
 
 class DB2JBrowse():
 
-    def __init__(self, jbrowse_path,jbrowse_data_path="data/jbrowse/data/"):
+    def __init__(self, jbrowse_path, jbrowse_data_path=None, tmp="/tmp/"):
         self.name = ""
 
-        self.fasta_path = "/tmp/jbrowse.fasta"
-        self.gff_path = "/tmp/jbrowse.gff"
+        self.fasta_path = tmp + "/jbrowse.fasta"
+        self.gff_path = tmp + "/jbrowse.gff"
         self.ovewrite = True
         self.source = "."
         self.jbrowse_path = jbrowse_path
-        self.jbrowse_data_path = jbrowse_data_path
+        self.jbrowse_data_path = jbrowse_data_path if jbrowse_data_path else (jbrowse_path + "/data/")
         self.accession = None
         self.excluded = ["source"]
         self.stderr = sys.stderr
@@ -62,42 +70,53 @@ class DB2JBrowse():
 
         for feature in tqdm(qs, file=self.stderr, total=qs.count()):
             if feature.type_term.identifier in ["CDS", "tRNA", "rRNA", "miRNA", "soRNA", "sRNA", "miRNA",
-                                                "repeat_region"]:
+                                                "repeat_region", "mat_peptide"]:
+                # ,"3'UTR","5'UTR","stem_loop"
                 self.process_seqfeature(bioentry.accession, feature, h_gff)
 
-    def process_seqfeature(self, accession: str, feature: Seqfeature, h_gff):
-        loc = list(feature.locations.all())
+    def process_seqfeature(self, contig_accession, feature: Seqfeature, h_gff):
+        loc = sorted(feature.locations.all(), key=lambda x: x.start_pos)
         start = loc[0].start_pos
         end = loc[-1].end_pos
         strand = loc[0].strand
 
         fid = str(feature.seqfeature_id)
-        attributes = ["ID=" + str(fid)]
+        attributes = ["ID=" + str(fid), "BioentryId="+str(feature.qualifiers_dict()['BioentryId'])]
+
         qualifiers = {x.term.identifier: x.value for x in feature.qualifiers.all()}
         desc = ""
+        if ("note" in qualifiers) and (self.previous_gene != qualifiers["note"]):
+            desc = qualifiers["note"]
+        elif ("product" in qualifiers) and (self.previous_gene != qualifiers["product"]):
+            desc = qualifiers["product"]
+
+        name = ""
         if ("gene" in qualifiers) and (self.previous_gene != qualifiers["gene"]):
             gene = qualifiers["gene"]
-            desc = gene
+            name = gene
         else:
             gene = str(feature.seqfeature_id)
 
         attributes.append("gene=" + gene)
         self.previous_gene = gene
 
-        if ("locus_tag" in qualifiers) and qualifiers["locus_tag"] and (self.previous_lt != qualifiers["locus_tag"]):
+        lt = ""
+        if  ("locus_tag" in qualifiers) and qualifiers["locus_tag"] and (self.previous_lt != qualifiers["locus_tag"]):
             lt = qualifiers["locus_tag"]
+            if not name:
+                name = lt
             self.previous_lt = qualifiers["locus_tag"]
         else:
             lt = gene
 
         attributes.append("locus_tag=" + lt)
-        attributes.append("Name=" + lt)
+        attributes.append("Name=" + name)
         if desc and lt != desc:
             attributes.append("description=" + desc)
 
         attributes_str = ";".join([x.replace(";", "_") for x in attributes])
         r = "\t".join(
-            [str(x) for x in [accession, self.source, feature.type_term.identifier, start, end,
+            [str(x) for x in [contig_accession, self.source, feature.type_term.identifier, start, end,
                               ".", strand, 0, attributes_str]])
         h_gff.write(r + "\n")
 
@@ -144,17 +163,17 @@ class DB2JBrowse():
         http://jbrowse.org/docs/html_features.html
         """
         sys.stderr.write("prepare-refseqs\n")
-        cmd = """docker run -v {jbrowse_data_path}:/jbrowse/data/ -v {fasta_path}:/tmp/jbrowse.fasta \
+        cmd = """docker run -u $(id -u):$(id -g) -v {jbrowse_data_path}:/jbrowse/data/ -v {fasta_path}:/tmp/jbrowse.fasta \
         jbrowse/jbrowse-1.12.0 bin/prepare-refseqs.pl --fasta /tmp/jbrowse.fasta --out data/{acc} --key "Sequence"
         """.format(jbrowse_path=self.jbrowse_path, jbrowse_data_path=self.jbrowse_data_path,
                    acc=self.accession, fasta_path=self.fasta_path)
         sp.call(cmd, shell=True)
 
         sys.stderr.write("flatfile-to-json.pl\n")
-        cmd = """docker run -v {jbrowse_data_path}:/jbrowse/data/ -v {gff_path}:/tmp/jbrowse.gff \
+        cmd = """docker run -u $(id -u):$(id -g) -v {jbrowse_data_path}:/jbrowse/data/ -v {gff_path}:/tmp/jbrowse.gff \
          jbrowse/jbrowse-1.12.0 ./bin/flatfile-to-json.pl --gff "/tmp/jbrowse.gff" --out "/jbrowse/data/{acc}" \
           --key "{label}" --trackLabel "{label}" --trackType CanvasFeatures --nameAttributes "gene,locus_tag" \
-           --clientConfig '{clientConfig}' 
+           --clientConfig '{clientConfig}'
         """.format(jbrowse_path=self.jbrowse_path, jbrowse_data_path=self.jbrowse_data_path,
                    acc=self.accession, gff_path=self.gff_path, label="Genes",
                    clientConfig=json.dumps({"description": "description"}))
@@ -167,8 +186,8 @@ class DB2JBrowse():
         sp.call(cmd, shell=True)
 
         sys.stderr.write("generate-names\n")
-        cmd = """docker run -v {jbrowse_data_path}:/jbrowse/data/  \
-         jbrowse/jbrowse-1.12.0 ./bin/generate-names.pl  --out "/jbrowse/data/{acc}" --tracks "{labels}" 
+        cmd = """docker run -u $(id -u):$(id -g) -v {jbrowse_data_path}:/jbrowse/data/  \
+         jbrowse/jbrowse-1.12.0 ./bin/generate-names.pl  --out "/jbrowse/data/{acc}" --tracks "{labels}"
         """.format(jbrowse_path=self.jbrowse_path, jbrowse_data_path=self.jbrowse_data_path,
                    acc=self.accession, labels=",".join(["Sequence", "Genes"]))  # --className  feature
 

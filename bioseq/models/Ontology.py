@@ -2,7 +2,6 @@
 from __future__ import unicode_literals
 from django.utils.translation import gettext_lazy as __
 from django.db import models
-from django.shortcuts import reverse
 
 from .Dbxref import Dbxref
 
@@ -66,6 +65,7 @@ class Ontology(models.Model):
                 identifier="is_a", name="is_a", version=1, ontology=graph_ontology, definition="")[0]
 
         ontology = Ontology.objects.get_or_create(name=Ontology.GO)[0]
+        ontology = Ontology.objects.get_or_create(name=Ontology.EC)[0]
 
         Ontology.dbmap = {
             "biological_process": Dbxref.objects.get_or_create(dbname="go", accession="biological_process", version=1)[

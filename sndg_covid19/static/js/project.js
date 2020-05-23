@@ -7,10 +7,13 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import FeatureViewer from 'feature-viewer';
 import * as NGL from 'ngl';
 
+
 import dt from  'datatables.net';
 import 'datatables.net-dt/css/jquery.dataTables.min.css';
 window.$.DataTable = dt;
 window.NGL = NGL;
+
+window.msa = msa;
 
 
 // import 'bootstrap/dist/css/bootstrap.css';
@@ -42,6 +45,12 @@ class SeqDiv extends HTMLElement {
 
 window.customElements.define("sequence-viewer", SeqDiv);
 
+// import  '@gmod/jbrowse/dist/main.bundle';
+
+// window.JBrowse = JBrowse;
+
 window.Sequence = Sequence;
 window.FeatureViewer = FeatureViewer;
 window.$ = $;
+
+

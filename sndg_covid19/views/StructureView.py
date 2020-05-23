@@ -19,10 +19,11 @@ class StructureView(TemplateView):
         context["chains"] = [{"name": x} for x in set([r.chain for r in pdbobj.residues.all() if r.chain.strip()])]
         context["layers"] = []
 
-        resnames = list(Residue.objects.filter(pdb=pdbobj, type=Residue.HETATOM).values("resname").distinct())
+        resnames = list(Residue.objects.filter(pdb=pdbobj).exclude(type__in=["R"]).values_list("resname",flat=True).distinct())
         if "HOH" in resnames or "WAT" in resnames:
             context["layers"].append("water")
-        elif len([x for x in resnames if resnames not in ["HOH", "WAT"]]):
+
+        if len([x for x in resnames if x not in ["HOH", "WAT","STP"]]):
             context["layers"].append("hetero")
 
         from collections import defaultdict
@@ -37,8 +38,8 @@ class StructureView(TemplateView):
                 context["dna"] += [x for x in context["chains"] if x["name"] == chain]
                 context["chains"] = [x for x in context["chains"] if x["name"] != chain]
 
-        ds = Property.objects.get(name="druggability_score")
-        rs = ResidueSet.objects.get(name="FPocketPocket")
+        ds = Property.objects.get(name=Property.druggability)
+        rs = ResidueSet.objects.get(name=PDBResidueSet.pocket_name)
 
         # sq = ResidueSetProperty.objects.select_related(pdbresidue_set)\
         #     .filter(property=ds,value__gte=0.2,pdbresidue_set=OuterRef("id"))
@@ -52,5 +53,5 @@ class StructureView(TemplateView):
             for rsr in p.residue_set_residue.all():
                 for a in rsr.residue.atoms.all():
                     p.atoms.append(a.serial)
-        context["residuesets"] = [{"name": "csa", "residues": range(700, 750)}]
+        # context["residuesets"] = [{"name": "csa", "residues": range(700, 750)}]
         return context

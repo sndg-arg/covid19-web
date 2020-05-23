@@ -20,10 +20,36 @@
   </div>
 </div>
 <div class="row">
+  <style>
 
-  <!--                <iframe  id="jbrowse"-->
-  <!--                 src="{% static 'jbrowse' %}/index.html?data=data/{{object.name}}&fullviewlink=false&menu=false&nav=true&tracklist=false&tracks=DNA,Genes"-->
-  <!--                 height="400px" width="100%"></iframe>-->
+
+    .jbrowse {
+      height: 300px;
+      width: 1500px;
+      padding: 0;
+      margin-left: 5em;
+      border: 1px solid #ccc;
+    }
+    .jbrowse .nav {
+      display: inline
+    }
+  </style>
+
+  <div   class="jbrowse"   id="GenomeBrowser">
+    <div id="LoadingScreen" style="padding: 50px;">
+      <h1>Loading...</h1>
+    </div>
+  </div>
+</div>
+<script
+  type="text/javascript"
+  src="{% static 'jbrowse' %}/dist/browser.bundle.js"
+  charset="utf-8"
+></script>
+
+<!--                  <iframe  id="jbrowse"-->
+<!--                   src="{% static 'jbrowse' %}/index.html?data=data/COVID19&fullviewlink=false&menu=false&nav=true&tracklist=false&tracks=DNA,Genes"-->
+<!--                   height="400px" width="100%"></iframe>-->
 
   <div class="row">
     <h3>{% trans 'Genes' %}</h3>
@@ -32,11 +58,11 @@
       <thead>
       <tr>
 
-        <td>{% trans 'Gene Name' %}</td>
-        <td>{% trans 'Description' %}</td>
-        <td>{% trans 'Region' %}</td>
-        <td>{% trans 'Description' %}</td>
-        <td>{% trans 'Structure' %}</td>
+        <td>{% trans 'Gen' %}</td>
+        <td>{% trans 'Proteína' %}</td>
+        <td>{% trans 'Región' %}</td>
+        <td>{% trans 'Descripción' %}</td>
+        <td>{% trans 'Estructuras' %}</td>
 
       </tr>
       </thead>
@@ -53,7 +79,13 @@
           {%endif%}
         </td>
         <td>{{c.first_location}}</td>
-        <td> {{c.description}} </td>
+        <td>
+          {% if c.description %}
+          {{c.description}}
+          {% else %}
+          {{c.extra_gene_props.description}}
+          {% endif %}
+        </td>
         <td>{{c.extra_gene_props.structures}}</td>
       </tr>
       {% endfor %}
@@ -64,4 +96,33 @@
 
 </div>
 
+{% endblock %}
+
+{% block javascript %}
+<script>
+  var features = [];
+  // Add some features
+  var config = {
+    containerID: "GenomeBrowser",
+    "baseUrl": "{% static 'jbrowse' %}/jbrowse",
+    "dataRoot": "{% static 'jbrowse' %}/data/COVID19",
+    "show_nav": true,
+    "show_tracklist": false,
+    "show_overview": true,
+    "update_browser_title": false,
+    "updateBrowserURL": false,
+    // "tracks":"DNA,Genes",
+    "show_fullviewlink":false
+    // fullviewlink=false&menu=false&nav=true&tracklist=false&tracks=DNA,Genes
+  };
+
+  // Add to the config or tracks
+
+  // Instantiate JBrowse
+  window.addEventListener("load", () => {
+
+    window.JBrowse = new window.Browser(config);
+    window.JBrowse.showTracks("Genes");
+  });
+</script>
 {% endblock %}

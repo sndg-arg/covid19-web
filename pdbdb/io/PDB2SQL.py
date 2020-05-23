@@ -70,7 +70,7 @@ class PDB2SQL():
             raise Exception("PDB code %s not found" % code)
 
         with open(pdb_path) as h:
-            pdb_model = PDB(code=code, experiment=str(entry.EXPERIMENT), text=h.read())
+            pdb_model = PDB(code=code, experiment=str(entry.EXPERIMENT), text=h.read(),header = entry.HEADER)
 
         resolution = None
         try:

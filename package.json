@@ -22,6 +22,7 @@
     "ngl": "^0.10.4",
     "datatables.net": "^1.10.20",
     "datatables.net-dt": "^1.10.20"
+
   },
   "devDependencies": {
     "file-loader": "^4.2.0",

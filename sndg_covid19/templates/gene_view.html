@@ -3,12 +3,7 @@
 {% load bioresources_extras %}
 
 {% block head %}
-<script type="application/javascript" src="{% static 'sequence-viewer.min.js' %}"></script>
 
-{# <link rel="stylesheet" type="text/css" href="https://cdn.rawgit.com/calipho-sib/feature-viewer/v1.0.0/dist/feature-viewer.min.css"> #}
-
-<script src="https://cdn.rawgit.com/calipho-sib/feature-viewer/v1.0.0/dist/feature-viewer.bundle.js"></script>
-<script src="{% static 'ols-graphview.js' %}" ></script>
 {% endblock %}
 
 {% block header %}
@@ -17,8 +12,10 @@
 
 {% block sidebarleft %}
 
+
+
 <div class="col-md-2 bg-light">
-<nav class="d-none d-md-block sidebar" style="position: fixed;margin-top: 0px">
+<nav class="d-none d-md-block sidebar fixed-left" style="background-color: rgba(0, 0, 255, 0.3);position: fixed;margin-top: 0px">
 
 
 <div class="sidebar-sticky">
@@ -36,16 +33,19 @@
               href="#localization">Localización Celular</a>
               </div>
 
+  <div class="sidebar-sticky">
+    <a class="justify-content-between align-items-center px-3 mt-4 mb-1  btn{% if not msa %} disabled{% endif %}"
+       href="#msa">Alineamiento</a></div>
 
 <div class="sidebar-sticky">
- <a class="justify-content-between align-items-center px-3 mt-4 mb-1  btn{% if not functions.other %} disabled{% endif %}"
-              href="#other">Otros</a></div>
+ <a class="justify-content-between align-items-center px-3 mt-4 mb-1  btn{% if not dbxrefs %} disabled{% endif %}"
+              href="#other">Identificadores <br /> Externos</a></div>
 
 <div class="sidebar-sticky">
  <a class="justify-content-between align-items-center px-3 mt-4 mb-1  btn{% if not structures %} disabled{% endif %}"
               href="#structure">Estructura</a></div>
 <div class="sidebar-sticky">
- <a class="justify-content-between align-items-center px-3 mt-4 mb-1 btn {% if not annotations %} disabled{% endif %}"
+ <a class="justify-content-between align-items-center px-3 mt-4 mb-1 btn {% if not object.features.count %} disabled{% endif %}"
               href="#annotation">Anotación</a></div>
 <div class="sidebar-sticky">
  <a class="justify-content-between align-items-center px-3 mt-4 mb-1 btn"
@@ -73,6 +73,7 @@
                   {{object.description}}
 
                 </td></tr>
+              {% if object.genes %}
                 <tr><td><b>Names/Genes</b></td><td>
                 {% for v in object.genes %}
 
@@ -80,6 +81,7 @@
 
                 {% endfor %}
                 </td></tr>
+              {% endif %}
             </table>
 
             {% if functions.biological_process or functions.molecular_function %}
@@ -90,7 +92,8 @@
 
             <ul>
             {% for q in functions.biological_process %}
-            <li><a href="https://www.ebi.ac.uk/ols/ontologies/go/terms?iri=http://purl.obolibrary.org/obo/{{q.identifier|replace:":|_"}}">{{q.name}}</a></li>
+            <li> <img src="{% static 'images/external.png' %}" alt="link to ontology" />
+              <a href="https://www.ebi.ac.uk/ols/ontologies/go/terms?iri=http://purl.obolibrary.org/obo/{{q.identifier|replace:":|_"}}">{{q.name}}</a></li>
             {% endfor %}
             </ul>
 
@@ -100,7 +103,8 @@
             <h4>Molecular Function/s</h4>
             <ul>
             {% for q in functions.molecular_function %}
-            <li><a href="https://www.ebi.ac.uk/ols/ontologies/go/terms?iri=http://purl.obolibrary.org/obo/{{q.identifier|replace:":|_"}}">{{q.name}}</a></li>
+            <li> <img src="{% static 'images/external.png' %}" alt="link to ontology" />
+              <a href="https://www.ebi.ac.uk/ols/ontologies/go/terms?iri=http://purl.obolibrary.org/obo/{{q.identifier|replace:":|_"}}">{{q.name}}</a></li>
             {% endfor %}
             </ul>
             {% endif %}
@@ -112,7 +116,8 @@
             <h3 id="localization">Localización Celular</h3>
             <ul>
             {% for q in functions.cellular_component %}
-            <li><a href="https://www.ebi.ac.uk/ols/ontologies/go/terms?iri=http://purl.obolibrary.org/obo/{{q.identifier|replace:":|_"}}">{{q.name}}</a></li>
+            <li> <img src="{% static 'images/external.png' %}" alt="link to ontology" />
+              <a href="https://www.ebi.ac.uk/ols/ontologies/go/terms?iri=http://purl.obolibrary.org/obo/{{q.identifier|replace:":|_"}}">{{q.name}}</a></li>
             {% endfor %}
             </ul>
             <div id="ontology_vis" style="display:None;height: 500px"></div>
@@ -123,7 +128,7 @@
                      displayOptions : {showButtonBox:false, showInfoWindow:false, showLegend:false,showListOfExtendedNodes:false},
                     }
 
-                    $(document).ready(function () {
+                    // $(document).ready(function () {
                          // let terms = '{% for q in functions.cellular_component %}{{q.identifier}} {% endfor %}';
                          // var term= "http://purl.obolibrary.org/obo/" + terms.split(" ")[0].replace(":","_") ;
                          //
@@ -137,9 +142,7 @@
                          //          const nx = instance.getNetwork();
                          //         console.log(params)
                          //      });
-
-
-                    });
+                    // });
 
 
 
@@ -147,42 +150,82 @@
             {% endif %}
 
 
-            {% if functions.other %}
-            <h3 id="other">Otros</h3>
 
-            {% endif %}
 
-            {% if structure %}
-            <h3 id="structure">Estructura</h3>
+{% if msa %}
 
-            <table class="table table-responsive" width="100%">
-            {% for feature in object.features.all %}
 
-                {% if feature.type_term.identifier == 'SO:0001079' %}
+<div class="row">
+  <div class="col-12">
+  <h3 id="msa">Alineamiento Múltiple</h3>
+
+
+<div id="msaDiv"></div>
+  </div>
+</div>
+
+{% endif %}
+{% if dbxrefs %}
+<h3 id="other">Keywords Uniprot</h3>
+
+<table id="table_dbxs" class="table table-responsive" width="100%">
+  <thead><tr><td>DB</td><td>Identificador</td></tr></thead>
+  <tbody>
+  {% for dbxref in dbxrefs %}
+
+
+  <tr>
+    <td>{{dbxref.dbname}}</td>
+    <td><a href="{{dbxref.url}}">{{dbxref.accession}}</a></td>
+
+  </tr>
+
+
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+            {% if structures %}
+            <h3 id="structure">Estructura/s</h3>
+
+            <table id="table_structure" class="table table-responsive" width="100%">
+              <thead>
+              <tr><td>Tipo</td><td>Cod</td><td>Nombre</td><td>Drogabilidad</td></tr>
+              </thead>
+              <tbody>
+            {% for structure in structures %}
+
+
             <tr>
-            <td>homology </td><td>{{feature.dbxrefs.all|first|getattribute:"dbxref"|getattribute:"accession"}}</td>
-            <td>{{feature.source_term.name}} </td>
-            <td>{{feature.locations.all|first|getattribute:"start_pos" }}</td><td>{{feature.locations.all|first|getattribute:"end_pos" }}</td>
+              <td> {{ structure.type }} </td>
+              <td><a href="{% url 'covid:structure_view' object.bioentry_id structure.code %}">{{structure.code}}</a> </td>
+              <td>{{structure.name}}</td>
+              <td>{{ structure.druggability }}</td>
+
             </tr>
-                {% endif %}
+
 
             {% endfor %}
+              </tbody>
             </table>
             {% endif %}
 
-            {% if object.features.all %}
+            {% if object.features.all  %}
             <h3 id="annotation">Anotación</h3>
             <table class="table table-responsive" width="100%">
-            {% for feature in object.features.all %}
-            {% with nofeatures='SO:0001079' %}
-                {% if feature.type_term.identifier not in nofeatures.split %}
+            {% for pfeature in protein_features %}
+
+
             <tr>
-            <td>{{feature.type_term.ontology.name}}</td><td>{{feature.type_term.identifier}}</td>
-            <td>{{feature.type_term.definition}}</td><td>{{feature.source_term.name}}</td>
-            <td>{{feature.locations.all|first|getattribute:"start_pos" }}</td><td>{{feature.locations.all|first|getattribute:"end_pos" }}</td>
+              <td>{{pfeature.type_term.identifier}}</td>
+              <td>{{pfeature.type_term.definition|default:""}}</td>
+              <td>{{pfeature.display_name}}</td>
+              <td>{{pfeature.locations.all|first|getattribute:"start_pos" }}</td>
+              <td>{{pfeature.locations.all|first|getattribute:"end_pos" }}</td>
             </tr>
-                {% endif %}
-            {% endwith %}
+
+
             {% endfor %}
             </table>
 
@@ -201,6 +244,9 @@
 
 
 <div id="protein-sequence-viewer2"></div>
+
+
+
 
 
 {% endblock %}
@@ -280,21 +326,24 @@
             //     filter: "type2",
             //     height: "5"
             // });
-            {% for ftype, locations in object.groupedFeatures.items %}
-            ft2.addFeature({
-                data: [
-                    {% for location in locations %}
-                    {x:{{location.start_pos}},y:{{location.end_pos}},description:"",id:""},
-                    {% endfor %}
-                ],
-                name: "{{ftype}}",
-                className: "test6",
-                color: "#81BEAA",
-                type: "rect",
-                filter: "type2"
-            });
 
-            {% endfor %}
+
+
+            // {% for ftype, locations in object.groupedFeatures.items %}
+            // ft2.addFeature({
+            //     data: [
+            //         {% for location in locations %}
+            //         {x:{{location.start_pos}},y:{{location.end_pos}},description:"",id:""},
+            //         {% endfor %}
+            //     ],
+            //     name: "{{ftype}}",
+            //     className: "test6",
+            //     color: "#81BEAA",
+            //     type: "rect",
+            //     filter: "type2"
+            // });
+            //
+            // {% endfor %}
 
             //Get and print in the browser console the position of the feature selected
             ft2.onFeatureSelected(function (d) {
@@ -338,8 +387,51 @@
                   'sequenceMaxHeight': "300px",
                   'badge': true
                 });
+                 {% if structures|length > 10 %}
+                 $('#table_structure').DataTable({"searching": false,pageLength:5, paging: true,"lengthChange": false });
+                 {% endif %}
+
+                 {% if dbxrefs|length > 10 %}
+                 $('#table_dbxs').DataTable({"searching": false,pageLength:5, paging: true,"lengthChange": false });
+                 {% endif %}
 
 
+                 {% if msa %}
+                 const opts = {};
+                 opts.el = '#msaDiv';
+                 opts.vis = {
+
+                   labelId: false,
+                   conserv: true,
+                   overviewbox: false,
+                   seqlogo: true,
+                 };
+                 opts.zoomer = {
+                   boxRectHeight: 1,
+                   boxRectWidth: 1,
+                   labelNameLength: 230,
+                   alignmentHeight: window.innerHeight * 0.8,
+                   labelFontsize: 12,
+                   labelIdLength: 50,
+                   leftOffset: 204
+                 };
+                 const m = msa(opts);
+                 $('#msaDiv').data(m);
+                 m.u.file.importURL('{% static "ORFs/"  %}{{msa}}', function(){
+                   m.render();
+                   $('#msaDiv').parent().css(   "box-sizing", "unset");
+                   $(".biojs_msa_marker span").css("white-space" , "nowrap");
+                 });
+
+                 // Fasta.read('{% static "ORFs/N_prot.fasta" %}', function (err, seqs) {
+                 //   // seqs.forEach(seq => {
+                 //   //   seq.id = seq.name;
+                 //   //   seq.name = tree_data[seq.id + "__"].organism;
+                 //   // });
+                 //   m.seqs.reset(seqs);
+                 //   m.render();
+                 // })
+                 {% endif %}
             </script>
 
 {% endblock %}

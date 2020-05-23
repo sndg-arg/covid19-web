@@ -24,8 +24,11 @@ class Command(BaseCommand):
 
     DEFAULT_COVID_DATA_URL = "https://www.ebi.ac.uk/uniprot/api/covid-19/uniprotkb/download?compressed=true&format=json&query=%2A"
     DEFAULT_COVID_FASTA_URL = "https://www.ebi.ac.uk/uniprot/api/covid-19/uniprotkb/download?compressed=true&format=fasta&query=%2A"
-    DEFAULT_COVID_FASTA = "/tmp/covid19.fasta"
-    DEFAULT_UNIP_COVID_FASTA = "/tmp/unip_covid19.fasta"
+    DEFAULT_COVID_FASTA = "data/tmp/covid19.fasta"
+    DEFAULT_UNIP_COVID_FASTA = "data/tmp/unip_covid19.fasta"
+    DEFAULT_COVID_JSON = "data/tmp/unip_covid19.json"
+    DEFAULT_BLAST_RESULT = "data/tmp/blast_unip_genome.tbl"
+    DEFAULT_UNIP_BIG_PROT = "P0DTD1"
 
     help = 'Tinny DB for documentation and testing purposes'
 
@@ -39,6 +42,8 @@ class Command(BaseCommand):
         parser.add_argument('--unip_fasta_url',
                             default=os.environ.get("DEFAULT_COVID_FASTA_URL", Command.DEFAULT_COVID_FASTA_URL))
         parser.add_argument('--tmp_db_fasta', default=os.environ.get("COVID_FASTA", Command.DEFAULT_COVID_FASTA))
+        parser.add_argument('--tmp_db_json', default=os.environ.get("COVID_JSON", Command.DEFAULT_COVID_JSON))
+        parser.add_argument('--tmp_blast_result', default=os.environ.get("COVID_JSON", Command.DEFAULT_BLAST_RESULT))
 
     def json2seqrecord(self, json_record):
         uid = json_record["primaryAccession"]
@@ -56,7 +61,7 @@ class Command(BaseCommand):
                 if "ecNumbers" in pd["recommendedName"]:
                     ecs += [x["value"] for x in pd["recommendedName"]["ecNumbers"]]
 
-        r = SeqRecord(id=uid, name="", description=desc, seq=Seq(""))
+        r = SeqRecord(id=uid, name="", description=desc, seq=Seq(json_record["sequence"]["value"]))
 
         if "genes" in json_record:
             for gene in json_record["genes"]:
@@ -81,7 +86,7 @@ class Command(BaseCommand):
             dbx = ref["database"] + ":" + ref["id"] if (ref["database"] + ":") not in ref["id"] else ref["id"]
             r.dbxrefs.append(dbx)
             self.dbx_dict[dbx] = {x["key"]: x["value"] for x in ref["properties"]}
-            if  ref["database"] == "GO":
+            if ref["database"] == "GO":
                 gt = self.dbx_dict[dbx]["GoTerm"]
                 self.dbx_dict[dbx]["GoTerm"] = ":".join(gt.split(":")[1:])
 
@@ -94,7 +99,7 @@ class Command(BaseCommand):
                     self.dbx_dict[dbx]["database"] = "cellular_component"
 
         for ref in (json_record["secondaryAccessions"] if "secondaryAccessions" in json_record else []
-                   ) + [json_record["uniProtkbId"],json_record["primaryAccession"]] :
+                   ) + [json_record["uniProtkbId"], json_record["primaryAccession"]]:
             dbx = "UnipAcc:" + ref.replace(" ", "_")
             r.dbxrefs.append(dbx)
 
@@ -117,10 +122,37 @@ class Command(BaseCommand):
                 r.features.append(seqf)
         return r
 
+    def process_big_prot(self, proteins, prot_id):
+        seqs_extra = []
+        bigprot = proteins[prot_id]
+        for f in bigprot.features:
+            if f.type == "chain" and len(f.location) < 5000:
+                seq = str(f.extract(bigprot.seq))
+                r = SeqRecord(id=prot_id + "_" + f.qualifiers["featureId"], name="",
+                              description=f.qualifiers["description"], seq=Seq(seq))
+                seqs_extra.append(r)
+                for f2 in bigprot.features:
+
+                    if f2.location.start >= f.location.start and f2.location.end <= f.location.end:
+                        if f2.type == "chain":
+                            r.dbxrefs.append("InterPro:" + f.qualifiers["featureId"])
+                        else:
+                            f3 = SeqFeature(location=FeatureLocation(start=f2.location.start - f.location.start,
+                                                                     end=f2.location.end - f.location.start),
+                                            type=f2.type, qualifiers=f2.qualifiers)
+                            r.features.append(f3)
+                proteins[r.id] = r
+        return seqs_extra
+
     def handle(self, *args, **options):
 
         protein_data = requests.get(options["unip_data_url"]).json()["results"]
+        with open(options["tmp_db_json"], "w") as h:
+            import json
+            json.dump(protein_data, h)
         proteins = bpio.to_dict([self.json2seqrecord(x) for x in protein_data])
+
+        seqs = self.process_big_prot(proteins, Command.DEFAULT_UNIP_BIG_PROT)
 
         fasta = options["tmp_db_fasta"]
         unip = Command.DEFAULT_UNIP_COVID_FASTA
@@ -128,19 +160,24 @@ class Command(BaseCommand):
         BioIO.proteome_fasta("COVID19", fasta)
 
         h = StringIO(requests.get(options["unip_fasta_url"]).text)
-        bpio.write(bpio.parse(h, "fasta"), unip, "fasta")
+        bpio.write(list(bpio.parse(h, "fasta")) + seqs, unip, "fasta")
 
         sp.call(f'makeblastdb -dbtype prot -in {unip}', shell=True)
 
-        cmd = f'blastp -db {unip} -query {fasta} -max_target_seqs 1 -evalue 1e-6 -qcov_hsp_perc 90 -outfmt "6 qseqid sseqid pident"  2>/dev/null'
+        cmd = f'blastp -db {unip} -query {fasta} -evalue 1e-6 -outfmt "6 qseqid sseqid pident slen length qcovs"  2>/dev/null'
         blast_result = sp.getoutput(cmd)
+
+        with open(options["tmp_blast_result"], "w") as h:
+            h.write(blast_result)
 
         prot_dict = {}
         for x in blast_result.split("\n"):
             if x.strip():
-                db_id, unip_id, ident = x.strip().split()
-                unip_id = unip_id.split("|")[1]
-                prot_dict[int(db_id)] = proteins[unip_id]
+                db_id, unip_id, ident, slen, length, qcovs = x.strip().split()
+                if ((int(length) * 1.0 / int(slen)) > 0.9) and (int(qcovs) > 90):
+                    unip_id = unip_id.split("|")[1] if "PRO_" not in  unip_id else unip_id
+                    prot_dict[int(db_id)] = proteins[unip_id]
+
 
         bdb = Biodatabase.objects.get(name="COVID19" + Biodatabase.PROT_POSTFIX)
 

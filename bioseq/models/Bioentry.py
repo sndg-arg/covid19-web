@@ -38,6 +38,7 @@ class Bioentry(models.Model):
         db_table = 'bioentry'
         unique_together = (('accession', 'biodatabase', 'version'), ('identifier', 'biodatabase'),)
 
+
     def get_absolute_url(self):
         return reverse(
             'bioresources:' + ('protein_view' if self.biodatabase.name.endswith("_prots") else "nucleotide_view"),
@@ -103,7 +104,9 @@ class Bioentry(models.Model):
         return 40  # "protein"
 
     def qualifiers_dict(self):
-        return {x.term.identifier: x.value for x in self.qualifiers.all()}
+        if not hasattr(self,"_qualifiers_dict"):
+            self._qualifiers_dict = {x.term.identifier: x.value for x in self.qualifiers.all()}
+        return self._qualifiers_dict
 
     def __str__(self):
         return "BioEntry('%s')" % self.accession
@@ -129,13 +132,16 @@ class Bioentry(models.Model):
 class BioentryDbxref(models.Model):
     bioentry_dbxref_id = models.AutoField(primary_key=True)
     bioentry = models.ForeignKey(Bioentry, models.CASCADE, related_name="dbxrefs")
-    dbxref = models.ForeignKey('Dbxref', models.DO_NOTHING)
+    dbxref = models.ForeignKey('Dbxref', models.DO_NOTHING, related_name="dbxrefs")
     rank = models.SmallIntegerField(default=1, null=True)
 
     class Meta:
         managed = True
         db_table = 'bioentry_dbxref'
         unique_together = (('bioentry', 'dbxref', 'rank'),)
+        indexes = [
+            models.Index(fields=['bioentry',]),
+        ]
 
 
 class BioentryPath(models.Model):

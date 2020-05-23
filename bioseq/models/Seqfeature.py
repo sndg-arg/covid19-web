@@ -37,6 +37,10 @@ class Seqfeature(models.Model):
     class Meta:
         managed = True
         db_table = 'seqfeature'
+        indexes = [
+            models.Index(fields=['bioentry',]),
+            models.Index(fields=['type_term',]),
+        ]
         # unique_together = (('bioentry', 'type_term', 'source_term', 'rank'),)
 
     def strand(self):

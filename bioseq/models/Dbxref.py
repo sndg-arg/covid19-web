@@ -4,7 +4,13 @@ from django.utils.translation import gettext_lazy as __
 from django.db import models
 from ..managers.DbxrefManager import DbxrefManager
 
-
+class DBx(models.Model):
+    dbx_id = models.AutoField(primary_key=True)
+    url =models.CharField(max_length=255)
+    name=models.CharField(max_length=255)
+    category = models.CharField(max_length=255,blank=True,default="")
+    description = models.TextField(max_length=255,blank=True,default="")
+    url_template = models.TextField(max_length=255,blank=True,default="")
 
 class Dbxref(models.Model):
     dbxref_id = models.AutoField(primary_key=True)
@@ -33,3 +39,4 @@ class DbxrefQualifierValue(models.Model):
         managed = True
         db_table = 'dbxref_qualifier_value'
         unique_together = (('dbxref', 'term', 'rank'),)
+

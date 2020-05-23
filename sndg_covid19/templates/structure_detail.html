@@ -140,7 +140,7 @@
   <div class="col-md-8">
     <h1>{{ object.accession }}</h1>
     <table class="table  table-responsive">
-      <tr><td><b>Locus Tag</b></td><td>
+      <tr><td><b>Proteina</b></td><td>
         {{ object.accession }}
         <a href="{% url 'covid:gene_view' protein.bioentry_id %}">  {{ protein.accession }} </a>
       </td></tr>
@@ -150,16 +150,18 @@
         {{protein.description}}
 
       </td></tr>
-      <tr><td><b>Names/Genes</b></td><td>
+      {% if protein.genes %}
+      <tr><td><b>Nombre/Gen</b></td><td>
         {% for v in protein.genes %}
 
         {{ v }} <br />
 
         {% endfor %}
       </td></tr>
+      {% endif %}
 
       <tr><td>PDB</td><td> <img src="{% static 'images/external.png' %}" alt="link a PDB" />
-        <a href="https://www.rcsb.org/structure/{{pdbid}}}">{{pdbid}}</a></td></tr>
+        <a href="https://www.rcsb.org/structure/{{pdbid}}">{{pdbid}}</a></td></tr>
     </table>
   </div></div>
 
@@ -173,19 +175,18 @@
 
 </div>
 <div class="col-md-4">
-
-
-<h4>Chains</h4>
-<table id="chainsTable" class="table">
-<thead><tr><td>Nombre</td><td>Visible</td></tr></thead>
-<tbody>
-{% for chain in chains %}
-<tr>
-<td>{{chain.name}}</td>
-<td><input type="checkbox" checked="checked" onchange="toogle_view('{{chain.name}}')"></td>
-</tr>
-{% endfor %}
-
+  {% if chains|length > 1%}
+  <h4>Chains</h4>
+  <table id="chainsTable" class="table">
+  <thead><tr><td>Nombre</td><td>Visible</td></tr></thead>
+  <tbody>
+  {% for chain in chains %}
+  <tr>
+  <td>{{chain.name}}</td>
+  <td><input type="checkbox" checked="checked" onchange="toogle_view('{{chain.name}}')"></td>
+  </tr>
+  {% endfor %}
+{% endif %}
 
 </tbody>
 </table>

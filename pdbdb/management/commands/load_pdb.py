@@ -17,7 +17,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         pdbs = PDBs()
         parser.add_argument('--code', required=True,help="4 letter PDB code")
-        parser.add_argument('--tmp', default="/tmp/load_pdb")
+        parser.add_argument('--tmp', default="data/tmp/load_pdb")
         parser.add_argument('--pdbs_dir', default="/data/databases/pdb/divided/")
         parser.add_argument('--entries_path', default="/data/databases/pdb/entries.idx")
         parser.add_argument('--entries_url', default=pdbs.url_pdb_entries)
@@ -38,7 +38,7 @@ class Command(BaseCommand):
 
         except IOError as ex:
             traceback.print_exc()
-            self.stderr.write("error processing pockets from %s: %s" % (pdb.code, str(ex)))
+            self.stderr.write("error processing pockets from %s: %s" % (options['code'], str(ex)))
         except Exception as ex:
             traceback.print_exc()
             raise CommandError(ex)

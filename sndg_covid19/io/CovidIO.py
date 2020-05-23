@@ -31,11 +31,15 @@ class CovidIO:
         # for db_protein_id, unip_protein_id in protein_map
         for prot in tqdm(covid_biodb.entries.all()):
 
-            if prot.bioentry_id in protein_map:
+            if prot.bioentry_id not in protein_map:
+
+
+                sys.stderr.write(f"{prot.name} without annotation in uniprot\n")
+            else:
                 unip_seqrecord = protein_map[prot.bioentry_id]
                 prot.description = unip_seqrecord.description
-
                 for feature in unip_seqrecord.features:
+                    assert int(feature.location.start) < prot.seq.length,[int(feature.location.start) , prot.seq.length]
                     display_name = feature.qualifiers[
                         "description"] if "description" in feature.qualifiers else feature.type
                     source_term = Term.objects.get(ontology__name=Ontology.SFS, name="calculated")
@@ -44,14 +48,13 @@ class CovidIO:
                     sfqs = Seqfeature.objects.filter(bioentry=prot, source_term=source_term, type_term=type_term,
                                                      display_name=display_name[:64])
 
-                    if not sfqs.exists():
-                        sf = Seqfeature(bioentry=prot, source_term=source_term, type_term=type_term,
-                                        display_name=display_name[:64])
-                        sf.save()
-                        Location(start_pos=int(feature.location.start), end_pos=int(feature.location.end), seqfeature=sf,
-                                 strand=1).save()
-                    else:
-                        sf = sfqs.get()
+
+                    sf = Seqfeature(bioentry=prot, source_term=source_term, type_term=type_term,
+                                    display_name=display_name[:64])
+                    sf.save()
+                    Location(start_pos=int(feature.location.start), end_pos=int(feature.location.end), seqfeature=sf,
+                             strand=1).save()
+
 
                     if "featureId" in feature.qualifiers:
                         type_term = Term.objects.get_or_create(ontology=ontology, identifier="InterPro")[0]
@@ -59,7 +62,10 @@ class CovidIO:
                             seqfeature=sf, term=type_term, value=feature.qualifiers["featureId"])
 
                 for dbx in unip_seqrecord.dbxrefs:
-                    db, identifier = dbx.split(":")
+
+                    db = dbx.split(":")[0]
+                    identifier = ":".join( dbx.split(":")[1:])
+
                     if any([dbx.startswith(x) for x in ["GO:", "EC:"]]):
                         identifier = dbx
 

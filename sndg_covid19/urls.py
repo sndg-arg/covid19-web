@@ -14,7 +14,9 @@ app_name = 'covid'
 
 urlpatterns = [
 
+
     path('', assembly_view, name='genome_view'),
     path('<int:pk>', ProteinView, name='gene_view'),
     path('structure/<int:prot_id>/<str:pdbid>', StructureView.as_view(), name='structure_view'),
+    # path('static/jbrowse/data/COVID19/trackList2.json', assembly_view, name='genome_view'),
 ]

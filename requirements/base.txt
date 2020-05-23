@@ -18,3 +18,4 @@ django-redis>=4.11.0  # https://github.com/niwinz/django-redis
 
 biopython
 tqdm
+xmltodict

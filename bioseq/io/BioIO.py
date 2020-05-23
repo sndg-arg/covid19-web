@@ -165,7 +165,7 @@ class BioIO:
 
     def process_seqrecord(self, seqrecord):
         be = Bioentry(biodatabase=self.genomedb,
-                      taxon=Taxon.objects.get(ncbi_taxon_id=self.ncbi_tax),
+                      taxon=Taxon.objects.get_or_create(ncbi_taxon_id=self.ncbi_tax)[0],
                       name=seqrecord.name, accession=seqrecord.id,
                       identifier=seqrecord.id)
         be.save()

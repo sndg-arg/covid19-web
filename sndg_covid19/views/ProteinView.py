@@ -8,30 +8,101 @@ from bioseq.models.Bioentry import Bioentry
 from bioseq.models.Biodatabase import Biodatabase
 from bioseq.models.Seqfeature import Seqfeature
 from bioseq.models.Biosequence import Biosequence
-
+from bioseq.models.Dbxref import DBx,Dbxref
+from pdbdb.models import PDB
+from pdbdb.models import Property
 
 # from ..templatetags.bioresources_extras import split
 
+msa_map = {
+    "GU280_gp04": "E_prot.fasta",
+    "GU280_gp05": "M_prot.fasta",
+    "GU280_gp10": "N_prot.fasta",
+    "GU280_gp11": "orf10_prot.fasta",
+    "": "orf1a_prot.fasta",
+    "GU280_gp01": "orf1b_prot.fasta",
+    "GU280_gp03": "orf3a_prot.fasta",
+    "GU280_gp06": "orf6_prot.fasta",
+    "GU280_gp07": "orf7a_prot.fasta",
+    "GU280_gp08": "orf7b_prot.fasta",
+    "GU280_gp09": "orf8_prot.fasta",
+    "GU280_gp02": "S_prot.fasta"
+}
+
+
+def url_map(db_map, dbname, accession):
+    if dbname in db_map:
+        dbx = db_map[dbname]
+        try:
+            return dbx.url_template % accession
+        except:
+            print(dbx.url_template)
+            return (dbx.url_template)
+    return "www.google.com?q=" + accession
+
 
 def ProteinView(request, pk):
-    be = (Bioentry.objects.select_related("biodatabase").select_related("taxon")
-          .prefetch_related("dbxrefs__dbxref", "qualifiers__term__dbxrefs__dbxref", "seq",
-                            "features__locations", "features__source_term",
-                            "features__type_term__ontology", "features__qualifiers"))
+    be = (Bioentry.objects
+          .prefetch_related(  "seq",  "qualifiers__term","qualifiers__term__dbxrefs__dbxref", # "dbxrefs__dbxref","qualifiers__term__dbxrefs__dbxref",
+                            "features__locations", "features__source_term", #"dbxrefs__dbxref",
+                            "features__type_term__ontology", "features__qualifiers__term"))
+    dbxss =  list(Dbxref.objects.filter(dbxrefs__bioentry_id=pk))
+    #.select_related("biodatabase").select_related("taxon")
     be = be.get(bioentry_id=pk)
 
-    feature = Seqfeature.objects.prefetch_related("locations").filter(
-        seqfeature_id=be.qualifiers_dict()["GFeatureId"]).get()
+    sfid = be.qualifiers_dict()["GFeatureId"]
+    feature = Seqfeature.objects.prefetch_related("locations").filter(bioentry__biodatabase__name="COVID19",
+        seqfeature_id=sfid).get()
     # [x.term  for x in be.qualifiers.all() if x.term.ontology.name == "Gene Ontology"][0].dbxrefs.all()
 
     locations = list(feature.locations.all())
     start = locations[0].start_pos
     end = locations[-1].end_pos
 
+
     seq = Biosequence.objects.raw("""
     SELECT bioentry_id, version , length , alphabet ,SUBSTRING( seq,%i,%i ) seq
     FROM biosequence WHERE bioentry_id = %i ;
     """ % (start, end - start, feature.bioentry_id))[0]
+    # UnipName
+    functions = go_function(be)
+    pfeatures = protein_features(be)
+    structures = protein_structures(dbxss)
+    pdbxrefs = dbxrefs(dbxss)
+
+
+
+    msa = msa_map.get(be.accession,"")
+
+    return render(request, 'gene_view.html', {
+        "functions": functions, "assembly": "assembly", "msa":msa,
+        "object": be, "feature": feature, "seq": seq, "start": start, "end": end,
+        "protein_features": pfeatures, "structures": structures, "dbxrefs": pdbxrefs,
+        "sidebarleft": 1})
+
+
+def dbxrefs(dbxss):
+    pdbxrefs = []
+
+    dbs = []
+    for dbxref in dbxss:
+        if dbxref.dbname.lower() not in ["go", "pdb"]:
+            dbs.append(dbxref.dbname)
+    dbs = set(dbs)
+    dbmap = {x.name: x for x in DBx.objects.filter(name__in=dbs)}
+
+    for dbxref in dbxss:
+        if dbxref.dbname.lower() not in ["go", "pdb", "pdbsum"]:
+            pdbxrefs.append({
+                "dbname": dbxref.dbname,
+                "accession": dbxref.accession,
+                "url": url_map(dbmap, dbxref.dbname, dbxref.accession)
+            })
+
+    return pdbxrefs
+
+
+def go_function(be):
     functions = {"biological_process": [], "molecular_function": [], "cellular_component": []}
     for qual in [x for x in be.qualifiers.all()]:
         # term__dbxrefs__dbxref__accession="goslim_generic"
@@ -39,8 +110,46 @@ def ProteinView(request, pk):
             if dbxref.dbxref.dbname == "go":
                 if dbxref.dbxref.accession in functions:
                     functions[dbxref.dbxref.accession].append(qual.term)
+    return functions
 
-    return render(request, 'gene_view.html', {
-        "functions": functions, "assembly": "assembly",
-        "object": be, "feature": feature, "seq": seq, "start": start, "end": end,
-        "sidebarleft": 1})
+
+def protein_structures(dbxss):
+    structures = []
+    pdbs = []
+    for dbxref in dbxss:
+        if dbxref.dbname.lower() == "pdb":
+            pdbs.append(dbxref.accession.lower())
+    pdb_map = {pdb.code: pdb for pdb in
+               PDB.objects.prefetch_related("residue_sets__properties__property", "residue_sets__residue_set").filter(
+                   code__in=set(pdbs))}
+
+    for pdb_code in pdbs:
+        druggability = ""
+        header = ""
+        if pdb_code in pdb_map:
+            pdb = pdb_map[pdb_code]
+            header = pdb.header
+            p = pdb.max_druggability_pocket()
+
+            druggability = p.properties_dict()[Property.druggability] if p else ""
+
+        structure = {
+            "code": pdb_code,
+            "name": header,
+            "type": "PDB",
+            "druggability": druggability,
+            "info": ""
+        }
+        structures.append(structure)
+    return structures
+
+
+def protein_features(protein_entry):
+    pfeatures = []
+    for feature in protein_entry.features.all():
+        if feature.type_term.identifier not in 'SO:0001079':
+            pfeatures.append(feature)
+            if "InterPro" in feature.qualifiers_dict():
+                feature.display_name = feature.display_name + " (" + feature.qualifiers_dict()["InterPro"] + ")"
+
+    return pfeatures
