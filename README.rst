@@ -14,16 +14,16 @@ SNDG web to show argentinian COVID19 isolates
             * .env
 * Web
     * Install JBrowse
-    <code>
+    ```bash
     #https://jbrowse.org/docs/embedding.html
     wget "https://github.com/GMOD/jbrowse/releases/download/1.16.6-release/JBrowse-1.16.6.zip"
     unzip JBrowse-1.16.6.zip
     rm JBrowse-1.16.6.zip
     mv JBrowse-1.16.6/ data/jbrowse
     sed -i 's|c.src=function(t){return i.p+""+|c.src=function(t){return "/static/jbrowse/"+i.p+""+|' data/jbrowse/dist/browser.bundle.js
-    </code>
+    ```
     * Build Front End libraries
-    <code>
+    ```bash
     # Install Javascript dependencies
     docker run -u $(id -u):$(id -g) --rm -v $PWD:/out -w /out node:lts npm install
     # Fix old libraries
@@ -31,7 +31,7 @@ SNDG web to show argentinian COVID19 isolates
     sed -i 's|require("bootstrap/js/popover.js")|require("bootstrap/js/dist/popover.js")|' ./node_modules/feature-viewer/lib/index.js
     # Build javascript dependency
     docker run -u $(id -u):$(id -g) --rm -v $PWD:/out -w /out node:lts npm run-script build
-    </code>
+    ```
 
 * DB
     * Postgres Engine
