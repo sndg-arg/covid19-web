@@ -373,6 +373,7 @@ fabric.properties
 ### Project template
 
 sndg_covid19/media/
+data/log/*
 
 .pytest_cache/
 
