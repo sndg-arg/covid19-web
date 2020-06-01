@@ -46,13 +46,17 @@ RUN  wget -O /ref/genome.fna "https://www.ncbi.nlm.nih.gov/sviewer/viewer.cgi?to
 RUN makeblastdb -dbtype nucl -in /ref/genome.fna && bwa index genome.fna && samtools faidx genome.fna && \
     samtools dict -o genome.dict genome.fna
 
+RUN pip3 install tqdm
+
 ENV PATH $PATH:/app/MEGAHIT-1.2.9-Linux-x86_64-static/bin/:/app/bbmap/:/app/script/
 COPY process_sample.sh /app/script/
+COPY process_batch.py /app/script/
 COPY adapters.fasta /ref/
 
-RUN chmod +x  /app/script/process_sample.sh
+RUN chmod +x  /app/script/process_sample.sh  /app/script/process_batch.py
 
-
+RUN groupadd covid && useradd -r -u 1000 -g covid covid
+USER covid
 WORKDIR /out
 
 
