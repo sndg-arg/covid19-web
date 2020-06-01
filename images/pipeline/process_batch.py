@@ -6,7 +6,7 @@ from collections import defaultdict
 from tqdm import tqdm
 
 import argparse
-parser = argparse.ArgumentParser(description='Videos to images')
+parser = argparse.ArgumentParser(description='')
 parser.add_argument("-i",'--dir_entrada', type=str, help='Directorio con los fastq, un solo par por muestra')
 parser.add_argument("-o",'--dir_salida', type=str, help='Directorio donde se pone las salidas por muestra ')
 args = parser.parse_args()

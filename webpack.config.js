@@ -4,7 +4,7 @@ module.exports = {
     entry: './sndg_covid19/static/js/project.js',
     output: {
         filename: 'main.js',
-        path: path.resolve(__dirname, 'staticfiles'),
+        path: path.resolve(__dirname, './sndg_covid19/static/auto'),
     },
     node: {
         fs: 'empty'

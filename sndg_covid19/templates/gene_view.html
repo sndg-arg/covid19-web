@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load static i18n %}
 {% load bioresources_extras %}
 
 {% block head %}
@@ -213,13 +214,21 @@
 
             {% if object.features.all  %}
             <h3 id="annotation">Anotación</h3>
-            <table class="table table-responsive" width="100%">
+            <table id="table_annotation" class="table table-responsive" width="100%">
+              <thead>
+              <tr><td>{% trans 'Tipo' %}</td>
+                <td>{% trans 'Identificador' %}</td>
+                <td>{% trans 'Inicio' %}</td><td>{% trans 'Fin' %}</td>
+              </tr>
+              </thead>
+              <tbody>
+
             {% for pfeature in protein_features %}
 
 
             <tr>
               <td>{{pfeature.type_term.identifier}}</td>
-              <td>{{pfeature.type_term.definition|default:""}}</td>
+<!--              <td>{{pfeature.type_term.definition|default:""}}</td>-->
               <td>{{pfeature.display_name}}</td>
               <td>{{pfeature.locations.all|first|getattribute:"start_pos" }}</td>
               <td>{{pfeature.locations.all|first|getattribute:"end_pos" }}</td>
@@ -388,13 +397,16 @@
                   'badge': true
                 });
                  {% if structures|length > 10 %}
-                 $('#table_structure').DataTable({"searching": false,pageLength:5, paging: true,"lengthChange": false });
+                 $('#table_structure').DataTable({"searching": true,pageLength:10, paging: true,"lengthChange": false });
                  {% endif %}
 
                  {% if dbxrefs|length > 10 %}
-                 $('#table_dbxs').DataTable({"searching": false,pageLength:5, paging: true,"lengthChange": false });
+                 $('#table_dbxs').DataTable({"searching": false,pageLength:10, paging: true,"lengthChange": false });
                  {% endif %}
 
+                 {% if object.features.count > 10 %}
+                 $('#table_annotation').DataTable({"searching": true,pageLength:10, paging: true,"lengthChange": false });
+                 {% endif %}
 
                  {% if msa %}
                  const opts = {};

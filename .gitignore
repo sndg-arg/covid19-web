@@ -374,6 +374,7 @@ fabric.properties
 
 sndg_covid19/media/
 data/log/*
+sndg_covid19/static/auto/*
 
 .pytest_cache/
 
