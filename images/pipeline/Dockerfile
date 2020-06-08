@@ -42,9 +42,9 @@ RUN pip3 install NucDiff
 
 WORKDIR /ref
 
-RUN  wget -O /ref/genome.fna "https://www.ncbi.nlm.nih.gov/sviewer/viewer.cgi?tool=portal&save=file&log$=seqview&db=nuccore&report=fasta&id=1802633808&conwithfeat=on&withparts=on&hide-cdd=on"
-RUN makeblastdb -dbtype nucl -in /ref/genome.fna && bwa index genome.fna && samtools faidx genome.fna && \
-    samtools dict -o genome.dict genome.fna
+RUN  wget -O /ref/MN996528.fna "https://www.ncbi.nlm.nih.gov/sviewer/viewer.cgi?tool=portal&save=file&log$=seqview&db=nuccore&report=fasta&id=1802633808&conwithfeat=on&withparts=on&hide-cdd=on"
+RUN makeblastdb -dbtype nucl -in /ref/MN996528.fna && bwa index MN996528.fna && samtools faidx MN996528.fna && \
+    samtools dict -o MN996528.dict MN996528.fna
 
 RUN pip3 install tqdm
 
