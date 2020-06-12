@@ -167,7 +167,7 @@ def variants(protein_entry):
     for variant in vs:
         for sample_variant in variant.samples.all():
             sample, gisaid, fecha = sample_variant.name.split("|")
-            _, country, cod, anio = sample.split("/")
+            _, country, cod, anio = sample.split("/")[:4]
             if sample_variant.alt != "X":
                 record = {"ref": variant.ref, "pos": variant.pos+1, "alt": sample_variant.alt, "country": country, "cod": cod}
                 data.append(record)
