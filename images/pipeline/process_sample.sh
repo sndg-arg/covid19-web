@@ -10,7 +10,7 @@ TRIMR="${TRIMR:-5}"
 TRIML="${TRIML:-20}"
 MINLEN="${MINLEN:-40}"
 QPROM="${QPROM:-30}"
-NPROM="${QPROM:-20}"
+
 
 #*************************************************
 
@@ -30,7 +30,7 @@ echo "TRIMR: $TRIMR"
 echo "TRIML: $TRIML"
 echo "MINLEN: $MINLEN"
 echo "QPROM: $QPROM"
-echo "NPROM: $NPROM"
+
 echo "CPUS: $CPUS"
 
 #limpiar fastq con fastp o prinseq
@@ -40,7 +40,7 @@ IN2=$SAMPLE_R2
 OUT1=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_1_fastp.fastq
 OUT2=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_2_fastp.fastq
 echo fastp -f $TRIML -t $TRIMR -l $MINLEN -e $QPROM  --thread $CPUS -i $IN1 -I $IN2 -o $OUT1 -O $OUT2
-fastp -f $TRIML -t $TRIMR -l $MINLEN -e $QPROM -n $NPROM  --thread $CPUS -i $IN1 -I $IN2 -o $OUT1 -O $OUT2
+fastp -f $TRIML -t $TRIMR -l $MINLEN -e $QPROM  --thread $CPUS -i $IN1 -I $IN2 -o $OUT1 -O $OUT2
 
 rm fastp.html  fastp.json
 
@@ -61,8 +61,8 @@ IN2=$OUT2
 OUT1=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_1_dedupped.fastq
 OUT2=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_2_dedupped.fastq
 
-dedupe.sh threads=$CPUS absorbmatch=t  overwrite=t in=$IN1 out=$OUT1
-dedupe.sh threads=$CPUS absorbmatch=t  overwrite=t in=$IN2 out=$OUT2
+dedupe.sh threads=$CPUS ac=f absorbmatch=t  overwrite=t in=$IN1 out=$OUT1
+dedupe.sh threads=$CPUS ac=f absorbmatch=t  overwrite=t in=$IN2 out=$OUT2
 rm $IN1 $IN2
 
 ##reparar los fastq para que coincidan la cantidad y orden de los reads
@@ -151,7 +151,7 @@ import Bio.SeqIO as bpio
 with open('${OUT2}.fna','w') as h:
   for i,r  in enumerate(bpio.parse('${OUT2}/final.contigs.fa','fasta')):
       if len(r.seq) > 300:
-          r.description = ''
+#          r.description = r.des
           r.name = ''
           r.id = 'hCoV-19/Argentina/${SAMPLE_NAME}/2020_' + str(i)
           bpio.write(r,h,'fasta')

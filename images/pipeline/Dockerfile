@@ -46,7 +46,7 @@ RUN  wget -O /ref/MN996528.fna "https://www.ncbi.nlm.nih.gov/sviewer/viewer.cgi?
 RUN makeblastdb -dbtype nucl -in /ref/MN996528.fna && bwa index MN996528.fna && samtools faidx MN996528.fna && \
     samtools dict -o MN996528.dict MN996528.fna
 
-RUN pip3 install tqdm
+RUN pip3 install tqdm termcolor
 
 ENV PATH $PATH:/app/MEGAHIT-1.2.9-Linux-x86_64-static/bin/:/app/bbmap/:/app/script/
 COPY process_sample.sh /app/script/
