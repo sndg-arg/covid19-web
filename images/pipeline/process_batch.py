@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 import os
+import sys
 import subprocess as sp
 from glob import glob
 from collections import defaultdict
 from tqdm import tqdm
-
 import argparse
 
 parser = argparse.ArgumentParser(description='')
@@ -17,10 +17,10 @@ if not os.path.exists(args.dir_salida):
     os.makedirs(args.dir_salida)
 
 muestras = defaultdict(list)
-for arch in glob(f"{args.dir_entrada}/*.fastq.gz"):
+for arch in glob(f"{args.dir_entrada}/*.fastq.gz") + glob(f"{args.dir_entrada}/*.fastq"):
     muestra = arch.split("/")[-1][:9]
     muestras[muestra].append(arch)
-print(f"se encontraron {len(muestras)} en {args.dir_entrada}")
+sys.stderr.write(f"se encontraron {len(muestras)} en {args.dir_entrada}\n")
 for k, v in muestras.items():
     assert len(v) == 2, f"error: {k} tiene {len(v)} archivos"
 

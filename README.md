@@ -76,7 +76,7 @@ mkdir data/pdb
 
 * Development
     * ./manage.py makemessages  -l es -l en  -i -v 3 "env/*" # env in case you have an virtualenv there
-    * manage.py shell_plus --ipython --print-sql # interactive ipython shell
+    * ./manage.py shell_plus --ipython --print-sql # interactive ipython shell
 
 * Production
     * export DJANGO_SETTINGS_MODULE=config.settings.production

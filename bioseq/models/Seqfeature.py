@@ -24,8 +24,7 @@ class Seqfeature(models.Model):
 
     index_updated = models.BooleanField(default=False)
 
-    def qualifiers_dict(self):
-        return {x.term.identifier: x.value for x in self.qualifiers.all()}
+
 
     objects = SeqfeatureManager()
 
@@ -66,6 +65,12 @@ class Seqfeature(models.Model):
 
     def subfeatures(self):
         return [x.object_seqfeature for x in self.object_relationships.all()]
+
+
+    def qualifiers_dict(self):
+        if not hasattr(self,"_qualifiers_dict"):
+            self._qualifiers_dict = {x.term.identifier: x.value for x in self.qualifiers.all()}
+        return self._qualifiers_dict
 
     def is_pseudo(self):
         # count = Seqfeature.objects.filter(qualifiers__term__identifier="pseudo",

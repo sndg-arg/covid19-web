@@ -25,8 +25,8 @@ from bioseq.models.Location import Location
 from bioseq.models.Dbxref import Dbxref, DbxrefQualifierValue
 
 
-
-def bulk_save(iterator: Iterable, action: Callable[[BSeqFeature], Seqfeature], bulk_size: int = 1000,stderr=sys.stderr):
+def bulk_save(iterator: Iterable, action: Callable[[BSeqFeature], Seqfeature], bulk_size: int = 1000,
+              stderr=sys.stderr):
     data = []
     for obj in tqdm(iterator, file=stderr):
         data.append(obj)
@@ -42,25 +42,25 @@ def bulk_save(iterator: Iterable, action: Callable[[BSeqFeature], Seqfeature], b
 
 
 class BioIO:
-    included_feature_qualifiers = ["gene", "locus_tag", "db_xref","gene_synonym"]
+    included_feature_qualifiers = ["gene", "locus_tag", "db_xref", "gene_synonym"]
     excluded_feature_qualifiers = ["translation", "gene", "locus_tag", "db_xref", "product", ]
 
     @staticmethod
-    def proteome_fasta(genome_name,fp,dbname_postfix=Biodatabase.PROT_POSTFIX):
+    def proteome_fasta(genome_name, fp, dbname_postfix=Biodatabase.PROT_POSTFIX):
         if not hasattr(fp, 'write'):
-            h = open(fp,"w")
+            h = open(fp, "w")
         else:
             h = fp
         qs = Bioentry.objects.prefetch_related("seq").filter(
-            biodatabase__name = genome_name + dbname_postfix)
+            biodatabase__name=genome_name + dbname_postfix)
         try:
             for be in qs:
                 r = be.to_seq_record()
-                desc = "|".join( [ str(x) if x  else "" for x in [be.accession, "__".join(be.genes()), be.description ]  ] )
+                desc = "|".join([str(x) if x else "" for x in [be.accession, "__".join(be.genes()), be.description]])
                 r.id = str(be.bioentry_id)
                 r.description = desc
                 r.name = ""
-                bpio.write(r,h,"fasta")
+                bpio.write(r, h, "fasta")
         finally:
             if not hasattr(fp, 'write'):
                 h.close()
@@ -84,17 +84,17 @@ class BioIO:
         self.feature_term = Term.objects.get_or_create(ontology=self.ann_ontology, identifier="GFeatureId")[0]
         self.bioentry_term = Term.objects.get_or_create(ontology=self.ann_ontology, identifier="BioentryId")[0]
 
-
-
     def process_feature(self, be: Bioentry, feature: BSeqFeature):
         type_term = Term.objects.get_or_create(ontology=self.sfk_ontology, identifier=feature.type)[0]
         source_term = Term.objects.get_or_create(ontology=self.sfk_ontology, identifier="calculated")[0]
 
         display_name = feature.qualifiers["gene"][0] if "gene" in feature.qualifiers else (
             feature.qualifiers["locus_tag"][0] if "locus_tag" in feature.qualifiers else feature.type)
-        locus_tag = feature.qualifiers["locus_tag"][0] if "locus_tag" in feature.qualifiers else ""
-        product = feature.qualifiers["product"][0].replace(" ","_") if "product" in feature.qualifiers else ""
-        if feature.type == "mat_peptide" and product:
+
+        product = feature.qualifiers["product"][0].replace(" ",
+                                                           "_") if "product" in feature.qualifiers else display_name
+        locus_tag = feature.qualifiers["locus_tag"][0] if "locus_tag" in feature.qualifiers else product
+        if feature.type == "mat_peptide" and product and locus_tag not in product:
             display_name = display_name + "_" + product
             locus_tag = locus_tag + "_" + product
 
@@ -103,12 +103,16 @@ class BioIO:
 
         for key, value in feature.qualifiers.items():
             value = value[0]
-            if not (feature.type in ["CDS" , "RNA"] ) or (key in BioIO.included_feature_qualifiers):
+            if not (feature.type in ["CDS", "RNA"]) or (key in BioIO.included_feature_qualifiers):
                 term = Term.objects.get_or_create(identifier=key, ontology=self.ann_ontology)[0]
                 if term.identifier == "locus_tag":
                     value = locus_tag
                 sfqv = SeqfeatureQualifierValue.objects.create(seqfeature=sf, term=term, value=value)
                 sfqv.save()
+        if "locus_tag" not in feature.qualifiers:
+            term = Term.objects.get_or_create(identifier="locus_tag", ontology=self.ann_ontology)[0]
+            SeqfeatureQualifierValue.objects.get_or_create(seqfeature=sf, term=term, value=locus_tag)
+
         # sub_features
 
         for rank, location in enumerate(feature.location.parts):
@@ -119,9 +123,8 @@ class BioIO:
         if "pseudo" in feature.qualifiers:
             return
 
-        if feature.type in  ["CDS" , "RNA" ,"mat_peptide" ]:
+        if feature.type in ["CDS", "RNA", "mat_peptide"]:
             self.bioentry_from_feature(be, feature, sf)
-
 
     def bioentry_from_feature(self, be, feature, sf):
         description = feature.qualifiers["product"][0] if "product" else (
@@ -131,7 +134,7 @@ class BioIO:
         locus_tag = feature.qualifiers["locus_tag"][0] if "locus_tag" in feature.qualifiers else gene
         if feature.type == "mat_peptide":
             gene = gene + "_" + feature.qualifiers["product"][0]
-            locus_tag = locus_tag + "_" + feature.qualifiers["product"][0].replace(" ","_")
+            locus_tag = locus_tag + "_" + feature.qualifiers["product"][0].replace(" ", "_")
 
         if feature.type == "CDS":
             seq = feature.qualifiers["translation"][0]
@@ -148,7 +151,7 @@ class BioIO:
             be_count = Bioentry.objects.filter(biodatabase=db, accession__startswith=locus_tag + "_").count() + 1
             locus_tag = locus_tag + "_" + str(be_count)
         prot = Bioentry.objects.create(biodatabase=db,
-                                       description=description, name=gene,identifier=locus_tag,
+                                       description=description, name=gene, identifier=locus_tag,
                                        accession=locus_tag)
         BioentryQualifierValue.objects.create(bioentry=prot, term=self.feature_term, value=sf.seqfeature_id)
         SeqfeatureQualifierValue.objects.create(seqfeature=sf, term=self.bioentry_term, value=prot.bioentry_id)
@@ -161,6 +164,10 @@ class BioIO:
                 term = Term.objects.get_or_create(identifier=key, ontology=self.ann_ontology)[0]
                 BioentryQualifierValue.objects.create(bioentry=prot, term=term,
                                                       value=value)
+        if "locus_tag" not in prot.qualifiers_dict():
+            term = Term.objects.get_or_create(identifier="locus_tag", ontology=self.ann_ontology)[0]
+            BioentryQualifierValue.objects.create(bioentry=prot, term=term,
+                                                  value=locus_tag)
         return prot
 
     def process_seqrecord(self, seqrecord):
@@ -173,7 +180,7 @@ class BioIO:
         seq = Biosequence(bioentry=be, seq=str(seqrecord.seq), length=len(seqrecord.seq))
         seq.save()
 
-        bulk_save(seqrecord.features, action=lambda f: self.process_feature(be, f),stderr=self.stderr)
+        bulk_save(seqrecord.features, action=lambda f: self.process_feature(be, f), stderr=self.stderr)
 
     def process_record_list(self, seq_record_iterator: Iterable[SeqRecord], contig_count: int):
         with tqdm(seq_record_iterator, total=contig_count, file=self.stderr) as pbar:

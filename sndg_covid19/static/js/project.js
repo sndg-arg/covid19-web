@@ -7,6 +7,9 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import FeatureViewer from 'feature-viewer';
 import * as NGL from 'ngl';
 
+import 'pivottable/dist/pivot.css'
+import 'pivottable';
+
 
 import dt from  'datatables.net';
 import 'datatables.net-dt/css/jquery.dataTables.min.css';

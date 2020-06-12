@@ -148,12 +148,13 @@ megahit -1 $IN1 -2 $IN2 -o $OUT2
 
 result=$(python3 <<EOF
 import Bio.SeqIO as bpio
-for i,r  in enumerate(bpio.parse('${OUT2}/final.contigs.fa','fasta')):
-    if len(r.seq) > 300:
-        r.description = ''
-        r.name = ''
-        r.id = 'hCoV-19/Argentina/${SAMPLE_NAME}/2020_' + str(i)
-        bpio.write(r,'${OUT2}.fna','fasta')
+with open('${OUT2}.fna','w') as h:
+  for i,r  in enumerate(bpio.parse('${OUT2}/final.contigs.fa','fasta')):
+      if len(r.seq) > 300:
+          r.description = ''
+          r.name = ''
+          r.id = 'hCoV-19/Argentina/${SAMPLE_NAME}/2020_' + str(i)
+          bpio.write(r,h,'fasta')
 EOF
 )
 

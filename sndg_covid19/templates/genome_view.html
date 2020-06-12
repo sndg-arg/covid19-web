@@ -63,6 +63,7 @@
         <td>{% trans 'Región' %}</td>
         <td>{% trans 'Descripción' %}</td>
         <td>{% trans 'Estructuras' %}</td>
+        <td>{% trans 'Pos Variantes' %}</td>
 
       </tr>
       </thead>
@@ -87,11 +88,18 @@
           {% endif %}
         </td>
         <td>{{c.extra_gene_props.structures}}</td>
+        <td>{{c.extra_gene_props.variants}}</td>
       </tr>
       {% endfor %}
       </tbody>
     </table>
   </div>
+
+<h3 id="variants">Variantes proteicas en LATAM</h3>
+
+
+<div id="variants_output" style="margin: 30px;"></div>
+
 
 
 </div>
@@ -99,7 +107,22 @@
 {% endblock %}
 
 {% block javascript %}
+{{ variants|json_script:"variants_data" }}
+
 <script>
+
+  const variants_data = JSON.parse($("#variants_data").text()) ;
+  $("#variants_output").pivot(variants_data,
+    {
+      rows: ["name","pos","ref","alt"],
+      cols: ["country"]
+    });
+  $("#table_variants").hide()
+
+</script>
+
+<script>
+
   var features = [];
   // Add some features
   var config = {

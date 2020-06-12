@@ -8,25 +8,27 @@ from bioseq.models.Bioentry import Bioentry
 from bioseq.models.Biodatabase import Biodatabase
 from bioseq.models.Seqfeature import Seqfeature
 from bioseq.models.Biosequence import Biosequence
-from bioseq.models.Dbxref import DBx,Dbxref
+from bioseq.models.Dbxref import DBx, Dbxref
 from pdbdb.models import PDB
 from pdbdb.models import Property
+
+from bioseq.models.Variant import Variant
 
 # from ..templatetags.bioresources_extras import split
 
 msa_map = {
-    "GU280_gp04": "E_prot.fasta",
-    "GU280_gp05": "M_prot.fasta",
-    "GU280_gp10": "N_prot.fasta",
-    "GU280_gp11": "orf10_prot.fasta",
-    "": "orf1a_prot.fasta",
-    "GU280_gp01": "orf1b_prot.fasta",
-    "GU280_gp03": "orf3a_prot.fasta",
-    "GU280_gp06": "orf6_prot.fasta",
-    "GU280_gp07": "orf7a_prot.fasta",
-    "GU280_gp08": "orf7b_prot.fasta",
-    "GU280_gp09": "orf8_prot.fasta",
-    "GU280_gp02": "S_prot.fasta"
+    "E": "E_prot.fasta",
+    "M": "M_prot.fasta",
+    "N": "N_prot.fasta",
+    # "GU280_gp11": "orf10_prot.fasta",
+    "orf1ab": "orf1a_prot.fasta",
+    # "orf1ab_polyprotein": "orf1b_prot.fasta",
+    "NS3": "orf3a_prot.fasta",
+    "NS6": "orf6_prot.fasta",
+    "NS7a": "orf7a_prot.fasta",
+    "NS7b": "orf7b_prot.fasta",
+    "NS8": "orf8_prot.fasta",
+    "S": "S_prot.fasta"
 }
 
 
@@ -43,22 +45,22 @@ def url_map(db_map, dbname, accession):
 
 def ProteinView(request, pk):
     be = (Bioentry.objects
-          .prefetch_related(  "seq",  "qualifiers__term","qualifiers__term__dbxrefs__dbxref", # "dbxrefs__dbxref","qualifiers__term__dbxrefs__dbxref",
-                            "features__locations", "features__source_term", #"dbxrefs__dbxref",
+          .prefetch_related("seq", "qualifiers__term", "qualifiers__term__dbxrefs__dbxref",
+                            # "dbxrefs__dbxref","qualifiers__term__dbxrefs__dbxref",
+                            "features__locations", "features__source_term",  # "dbxrefs__dbxref",
                             "features__type_term__ontology", "features__qualifiers__term"))
-    dbxss =  list(Dbxref.objects.filter(dbxrefs__bioentry_id=pk))
-    #.select_related("biodatabase").select_related("taxon")
+    dbxss = list(Dbxref.objects.filter(dbxrefs__bioentry_id=pk))
+    # .select_related("biodatabase").select_related("taxon")
     be = be.get(bioentry_id=pk)
 
     sfid = be.qualifiers_dict()["GFeatureId"]
     feature = Seqfeature.objects.prefetch_related("locations").filter(bioentry__biodatabase__name="COVID19",
-        seqfeature_id=sfid).get()
+                                                                      seqfeature_id=sfid).get()
     # [x.term  for x in be.qualifiers.all() if x.term.ontology.name == "Gene Ontology"][0].dbxrefs.all()
 
     locations = list(feature.locations.all())
     start = locations[0].start_pos
     end = locations[-1].end_pos
-
 
     seq = Biosequence.objects.raw("""
     SELECT bioentry_id, version , length , alphabet ,SUBSTRING( seq,%i,%i ) seq
@@ -69,13 +71,12 @@ def ProteinView(request, pk):
     pfeatures = protein_features(be)
     structures = protein_structures(dbxss)
     pdbxrefs = dbxrefs(dbxss)
+    prot_variants = variants(be)
+    msa = msa_map.get(be.accession, "")
+    grouped_features = {k:[{y:z for y,z in v.__dict__.items() if y != '_state'} for v in vs ] for k,vs in be.groupedFeatures().items()}
 
-
-
-    msa = msa_map.get(be.accession,"")
-
-    return render(request, 'gene_view.html', {
-        "functions": functions, "assembly": "assembly", "msa":msa,
+    return render(request, 'gene_view.html', { "grouped_features":grouped_features,
+        "functions": functions, "assembly": "assembly", "msa": msa,"variants":prot_variants,
         "object": be, "feature": feature, "seq": seq, "start": start, "end": end,
         "protein_features": pfeatures, "structures": structures, "dbxrefs": pdbxrefs,
         "sidebarleft": 1})
@@ -153,3 +154,21 @@ def protein_features(protein_entry):
                 feature.display_name = feature.display_name + " (" + feature.qualifiers_dict()["InterPro"] + ")"
 
     return pfeatures
+
+
+def variants(protein_entry):
+    """
+    https://pivottable.js.org/examples/
+    :param protein_entry:
+    :return:
+    """
+    data = []
+    vs = Variant.objects.prefetch_related("samples").filter(bioentry=protein_entry)
+    for variant in vs:
+        for sample_variant in variant.samples.all():
+            sample, gisaid, fecha = sample_variant.name.split("|")
+            _, country, cod, anio = sample.split("/")
+            if sample_variant.alt != "X":
+                record = {"ref": variant.ref, "pos": variant.pos+1, "alt": sample_variant.alt, "country": country, "cod": cod}
+                data.append(record)
+    return data

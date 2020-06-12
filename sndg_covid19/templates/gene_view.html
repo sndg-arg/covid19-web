@@ -256,10 +256,27 @@
 
 
 
+{% if variants %}
+<h3 id="variants">Variantes</h3>
 
+
+<div id="variants_output" style="margin: 30px;"></div>
+
+{% endif %}
+
+
+<hr />
 
 {% endblock %}
 {% block javascript %}
+
+
+{{ grouped_features|json_script:"grouped_features_data" }}
+{{ variants|json_script:"variants_data" }}
+
+
+
+
             <script>
 
             var seq1 = new Sequence('{{object.seq.seq}}');
@@ -377,6 +394,47 @@
             var buttonResetZoom = '&nbsp;<a class="btn btn-info btnZoom" onclick="zoomOut()">Reset ZOOM</a>';
 
             $("#protein-features-viewer").append("<p class='btnBlock'>"+buttonZoom+buttonResetZoom+"</p");
+
+            const gruped_fs = JSON.parse($("#grouped_features_data").text()) ;
+
+            const variants_data = JSON.parse($("#variants_data").text()) ;
+            const unique_variants = [];
+            const unique_variants_keys = [];
+            variants_data.forEach(x=>{
+              const key = x.pos.toString() + "_" + x.alt
+              if (unique_variants_keys.indexOf(key) == -1){
+                unique_variants_keys.push(key);
+                unique_variants.push(x);
+              }
+            });
+            if (unique_variants.length){
+              ft2.addFeature({
+                data: unique_variants.map(x => {return {"x":x.pos,"y":x.pos+1,"description":x.alt}}),
+                name: "Variants",
+                className: "test2",
+                color: "#005572",
+                type: "rect",
+                filter: "type1"
+              });
+            }
+
+            Object.keys(gruped_fs).forEach(ftype => {
+              const locations = gruped_fs[ftype];
+              const data = locations.map( x => {return  { "x" : x.start_pos, "y" : x.end_pos }})
+              ft2.addFeature({
+                data: data,
+                name: ftype,
+                className: "test1",
+                color: "#005572",
+                type: "rect",
+                filter: "type1"
+              });
+            });
+
+
+
+
+
             </script>
 
 
@@ -445,5 +503,17 @@
                  // })
                  {% endif %}
             </script>
+
+<script>
+  {% if variants %}
+
+    $("#variants_output").pivot(variants_data,
+      {
+        rows: ["pos","ref","alt"],
+        cols: ["country"]
+      });
+    $("#table_variants").hide()
+  {% endif %}
+</script>
 
 {% endblock %}
