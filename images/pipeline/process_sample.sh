@@ -126,6 +126,7 @@ IN1=$OUT3
 OUT1=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_consensus.fasta
 bcftools index -f $IN1
 bcftools consensus -f /tmp/masked_ref.fna -H A -o ${OUT1}.tmp1 $IN1
+bcftools consensus -f $REFERENCE -H A -o ${OUT1}.unmasked $IN1
 bedtools maskfasta -fi ${OUT1}.tmp1 -bed $OUT4 -fo ${OUT1}.tmp2 # mask variants with low DP
 
 result=$(python3 <<EOF
@@ -135,9 +136,14 @@ r.description = ''
 r.name = ''
 r.id = 'hCoV-19/Argentina/${SAMPLE_NAME}/2020'
 bpio.write(r,'${OUT1}','fasta')
+r = bpio.read('${OUT1}.unmasked','fasta')
+r.description = ''
+r.name = ''
+r.id = 'hCoV-19/Argentina/${SAMPLE_NAME}/2020'
+bpio.write(r,'${OUT1}.unmasked','fasta')
 EOF
 )
-rm $IN1 ${IN1}.csi ${OUT1}.tmp1 ${OUT1}.tmp2 ${OUT4}
+rm ${IN1}.csi ${OUT1}.tmp1 ${OUT1}.tmp2 ${OUT4}
 
 #Assembly
 echo "Getting assembly..."

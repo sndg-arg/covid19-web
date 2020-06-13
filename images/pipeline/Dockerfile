@@ -48,12 +48,26 @@ RUN makeblastdb -dbtype nucl -in /ref/MN996528.fna && bwa index MN996528.fna && 
 
 RUN pip3 install tqdm termcolor
 
+RUN wget -O /app/snpEff_latest_core.zip http://sourceforge.net/projects/snpeff/files/snpEff_latest_core.zip/download && \
+    cd /app && unzip /app/snpEff_latest_core.zip && rm -r clinEff snpEff_latest_core.zip
+
+RUN apt install -y seqtk
+
 ENV PATH $PATH:/app/MEGAHIT-1.2.9-Linux-x86_64-static/bin/:/app/bbmap/:/app/script/
 COPY process_sample.sh /app/script/
 COPY process_batch.py /app/script/
-COPY adapters.fasta /ref/
+COPY process_assembly.py /app/script/
 
-RUN chmod +x  /app/script/process_sample.sh  /app/script/process_batch.py
+COPY adapters.fasta /ref/
+COPY orfs.fna /ref/
+COPY covid4snpeff.gb /app/snpEff/data/covid19/genes.gbk
+
+RUN echo "covid19.genome : covid19" >> /app/snpEff/snpEff.config
+RUN echo "  covid19.chromosomes : MN996528" >> /app/snpEff/snpEff.config
+RUN cd /app/snpEff && java -jar snpEff.jar build -genbank -v covid19
+
+
+RUN chmod +x  /app/script/process_sample.sh  /app/script/process_batch.py /app/script/process_assembly.py
 
 RUN groupadd covid && useradd -r -u 1000 -g covid covid
 USER covid
