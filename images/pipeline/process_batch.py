@@ -8,6 +8,7 @@ from tqdm import tqdm
 import argparse
 import re
 from  termcolor import colored
+import shutil
 parser = argparse.ArgumentParser(description='')
 parser.add_argument("-i", '--dir_entrada', type=str, help='Directorio con los fastq, un solo par por muestra')
 parser.add_argument("-o", '--dir_salida', type=str, help='Directorio donde se pone las salidas por muestra ')
@@ -16,6 +17,8 @@ args = parser.parse_args()
 assert os.path.exists(args.dir_entrada), f"{args.dir_entrada} no existe"
 if not os.path.exists(args.dir_salida):
     os.makedirs(args.dir_salida)
+if not os.path.exists(args.dir_salida + "/FASTA" ):
+    os.makedirs(args.dir_salida + "/FASTA" )
 
 muestras = defaultdict(list)
 for arch in glob(f"{args.dir_entrada}/*.fastq.gz") + glob(f"{args.dir_entrada}/*.fastq"):
@@ -37,3 +40,4 @@ with tqdm(muestras.items()) as pbar:
             os.makedirs(args.dir_salida + "/" + k)
         cmd = f'process_sample.sh {v[0]} {v[1]} {k} {args.dir_salida} > {args.dir_salida}/{k}/log.txt   2>&1'
         sp.call(cmd, shell=True)
+        shutil.copy(f"{args.dir_salida}/{k}/{k}_consensus.fasta",f"{args.dir_salida}/FASTA")

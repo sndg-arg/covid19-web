@@ -96,7 +96,7 @@ rm $OUT1
 IN=$OUT2
 TMP1=${RESULTS}/${SAMPLE_NAME}/my.sorted.bedgraph
 TMP2=${RESULTS}/${SAMPLE_NAME}/uncovered.intevals.bedgraph
-bedtools genomecov -ibam $IN -bg > $TMP1
+bedtools genomecov -ibam $IN -bga > $TMP1
 awk '$4<10' $TMP1 > $TMP2
 bedtools merge -i $TMP2 > ${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_uncovered.bed
 rm $TMP1 $TMP2

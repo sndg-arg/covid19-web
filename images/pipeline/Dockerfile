@@ -52,11 +52,10 @@ RUN wget -O /app/snpEff_latest_core.zip http://sourceforge.net/projects/snpeff/f
     cd /app && unzip /app/snpEff_latest_core.zip && rm -r clinEff snpEff_latest_core.zip
 
 RUN apt install -y seqtk
+RUN apt install -y mafft
+RUN apt install -y snp-sites
 
-ENV PATH $PATH:/app/MEGAHIT-1.2.9-Linux-x86_64-static/bin/:/app/bbmap/:/app/script/
-COPY process_sample.sh /app/script/
-COPY process_batch.py /app/script/
-COPY process_assembly.py /app/script/
+
 
 COPY adapters.fasta /ref/
 COPY orfs.fna /ref/
@@ -66,7 +65,10 @@ RUN echo "covid19.genome : covid19" >> /app/snpEff/snpEff.config
 RUN echo "  covid19.chromosomes : MN996528" >> /app/snpEff/snpEff.config
 RUN cd /app/snpEff && java -jar snpEff.jar build -genbank -v covid19
 
-
+ENV PATH $PATH:/app/MEGAHIT-1.2.9-Linux-x86_64-static/bin/:/app/bbmap/:/app/script/
+COPY process_sample.sh /app/script/
+COPY process_batch.py /app/script/
+COPY process_assembly.py /app/script/
 RUN chmod +x  /app/script/process_sample.sh  /app/script/process_batch.py /app/script/process_assembly.py
 
 RUN groupadd covid && useradd -r -u 1000 -g covid covid
