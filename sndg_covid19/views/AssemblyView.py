@@ -13,6 +13,8 @@ from bioseq.models.Variant import Variant, SampleVariant
 
 from django.views.decorators.clickjacking import xframe_options_exempt
 
+from . import latam_countries
+
 
 def assembly_view(request):
     params = {}
@@ -55,73 +57,30 @@ def assembly_view(request):
         properties[bioentry.bioentry_id] = {
             "structures": len(dbxss[bioentry.bioentry_id]),
             "description": bioentry.description,
-            "variants": variants.get(bioentry.bioentry_id,0)
+            "variants": variants.get(bioentry.bioentry_id, 0)
         }
 
     for f in features:
         if "BioentryId" in f.qualifiers_dict() and int(f.qualifiers_dict()["BioentryId"]) in properties:
             f.extra_gene_props = properties[int(f.qualifiers_dict()["BioentryId"])]
 
-
-
     sample_vars = list(
-        SampleVariant.objects.exclude(alt="X").values("variant__bioentry__accession", "name", "variant__ref", "variant__pos",
+        SampleVariant.objects.exclude(alt="X").values("variant__bioentry__accession", "sample__country", "variant__ref",
+                                                      "variant__pos",
                                                       "alt").annotate(count=Count('variant_id', distinct=True)))
 
-    paises = """Argentina
-Bolivia
-Brazil
-Chile
-Colombia
-Ecuador
-French Guiana
-Guyana
-Paraguay
-Peru
-Suriname
-Uruguay
-Venezuela
-Belize
-Costa Rica
-El Salvador
-Guatemala
-Honduras
-Mexico
-Nicaragua
-Panama
-Antigua & Barbuda
-Aruba
-Bahamas
-Barbados
-Cayman Islands
-Cuba
-Dominica
-Dominican Republic
-Grenada
-Guadeloupe
-Haiti
-Jamaica
-Martinique
-Puerto Rico
-Saint Barthélemy
-St. Kitts & Nevis
-St. Lucia
-St. Vincent and the Grenadines
-Trinidad & Tobago
-Turks & Caicos Islands
-Virgin Islands""".split("\n")
     for x in sample_vars:
-        x["country"] = x["name"].split("/")[1]
-        del x["name"]
+        x["country"] = x["sample__country"]
+        del x["sample__country"]
         x["name"] = x["variant__bioentry__accession"]
         del x["variant__bioentry__accession"]
         x["ref"] = x["variant__ref"]
         del x["variant__ref"]
         x["pos"] = x["variant__pos"]
         del x["variant__pos"]
-    sample_vars2 = [x for x in sample_vars if x["country"] in paises]
+    sample_vars2 = [x for x in sample_vars if x["country"] in latam_countries]
 
     params = {"query": "",
-              "lengths": lengths, "variants":sample_vars2,
+              "lengths": lengths, "variants": sample_vars2,
               "genes": features, "sidebarleft": {}}
     return render(request, 'genome_view.html', params)

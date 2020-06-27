@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% load static %}
+{% load i18n %}
+
+
+{% load static %}
+
+
+{% block javascripts%}
+
+
+{% endblock %}
+
+{% block content %}
+
+<h1>Posición Variante </h1>
+<div class="row">
+  <div class="col-md-3">
+    <table class="table table-bordered">
+      <tr>
+        <td>Gen</td>
+        <td><a href="{% url 'covid:gene_view' gene_id%}">{{gene|upper}}
+          {{gene_desc}}</a></td>
+      </tr>
+      <tr>
+        <td>Ref</td>
+        <td>{{pos}}{{ref}}</td>
+      </tr>
+    </table>
+  </div>
+</div>
+<p> Proporción de los alelos alternativos en los aislamientos por país (acumulativo)</p>
+<img src="{% static '' %}auto/posfigs/{{gene}}{{pos}}.png"/>
+
+{% endblock %}

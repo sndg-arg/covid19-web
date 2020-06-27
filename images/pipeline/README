@@ -1,0 +1,6 @@
+#  docker run -it --rm -v /mnt/data/data/covid/:/data -v $PWD:/out sndg/covid19 bash
+# ./process_batch.py -i /data/test_set/ -o ./results
+# docker run -it --rm -v /mnt/data/data/covid/:/data -v $PWD:/out sndg/covid19 bash -c 'process_batch.py -i /data/test_set/ -o ./results'
+# process_sample.sh /data/test_set/PAIS-A001_S35_L001_R1_001.fastq.gz /data/test_set/PAIS-A001_S35_L001_R2_001.fastq.gz PAIS-A001 ./results
+#java -jar /app/snpEff/snpEff.jar covid19 results/PAIS-A0001/PAIS-A0001_call.vcf.gz
+# process_assembly.py -i results/ -o pepe2 -p primers_mock.fna

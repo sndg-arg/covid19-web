@@ -67,9 +67,11 @@ class Bioentry(models.Model):
         # beg = Biodatabase.objects.get(name=self.biodatabase.name.replace("_prots", ""))
         # feature = Seqfeature.objects.seqfeature_from_locus_tag(beg.biodatabase_id, self.accession)
         # feature = list(feature)[0]
-        return [x.value for x in
-                self.qualifiers.filter(
-                    term__name__in=["gene_symbol", "old_locus_tag", "protein_id", "Alias", "gene","gene_synonym"])]
+        if not hasattr(self,"_genes"):
+            self._genes= [x.value for x in
+                          self.qualifiers.all() if x.term.name in
+                          ["gene_symbol", "old_locus_tag", "protein_id", "Alias", "gene","gene_synonym"]]
+        return self._genes
 
     def product_description(self):
         qs = self.qualifiers.filter(term__name="product")
@@ -125,7 +127,7 @@ class Bioentry(models.Model):
     def to_seq_record(self, addDesc=True):
         desc = self.description if (addDesc and self.description) else ""
 
-        r = SeqRecord(id=self.accession.replace(" ","_"), name=desc, seq=Seq(self.seq.seq))
+        r = SeqRecord(id=self.accession.replace(" ","_"), name="", description=desc, seq=Seq(self.seq.seq))
         return r
 
 

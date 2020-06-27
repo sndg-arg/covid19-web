@@ -30,12 +30,13 @@
       margin-left: 5em;
       border: 1px solid #ccc;
     }
+
     .jbrowse .nav {
       display: inline
     }
   </style>
 
-  <div   class="jbrowse"   id="GenomeBrowser">
+  <div class="jbrowse" id="GenomeBrowser">
     <div id="LoadingScreen" style="padding: 50px;">
       <h1>Loading...</h1>
     </div>
@@ -51,55 +52,54 @@
 <!--                   src="{% static 'jbrowse' %}/index.html?data=data/COVID19&fullviewlink=false&menu=false&nav=true&tracklist=false&tracks=DNA,Genes"-->
 <!--                   height="400px" width="100%"></iframe>-->
 
-  <div class="row">
-    <h3>{% trans 'Genes' %}</h3>
+<div class="row">
+  <h3>{% trans 'Genes' %}</h3>
 
-    <table id="genes_table" class="table table-responsive">
-      <thead>
-      <tr>
+  <table id="genes_table" class="table table-responsive">
+    <thead>
+    <tr>
 
-        <td>{% trans 'Gen' %}</td>
-        <td>{% trans 'Proteína' %}</td>
-        <td>{% trans 'Región' %}</td>
-        <td>{% trans 'Descripción' %}</td>
-        <td>{% trans 'Estructuras' %}</td>
-        <td>{% trans 'Pos Variantes' %}</td>
+      <td>{% trans 'Gen' %}</td>
+      <td>{% trans 'Proteína' %}</td>
+      <td>{% trans 'Región' %}</td>
+      <td>{% trans 'Descripción' %}</td>
+      <td>{% trans 'Estructuras' %}</td>
+      <td>{% trans 'Pos Variantes' %}</td>
 
-      </tr>
-      </thead>
-      <tbody>
-      {% for c in genes %}
-      <tr>
+    </tr>
+    </thead>
+    <tbody>
+    {% for c in genes %}
+    <tr>
 
-        <td>{{c.qualifiers_dict.gene}}</td>
-        <td>
-          {% if c.qualifiers_dict.BioentryId %}
-          <a href="{% url 'covid:gene_view' c.qualifiers_dict.BioentryId %}"> {{c.locus_tag}} </a>
-          {% else %}
-          {{c.locus_tag}} /  {{c.type_term.identifier}}
-          {%endif%}
-        </td>
-        <td>{{c.first_location}}</td>
-        <td>
-          {% if c.description %}
-          {{c.description}}
-          {% else %}
-          {{c.extra_gene_props.description}}
-          {% endif %}
-        </td>
-        <td>{{c.extra_gene_props.structures}}</td>
-        <td>{{c.extra_gene_props.variants}}</td>
-      </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </div>
+      <td>{{c.qualifiers_dict.gene}}</td>
+      <td>
+        {% if c.qualifiers_dict.BioentryId %}
+        <a href="{% url 'covid:gene_view' c.qualifiers_dict.BioentryId %}"> {{c.locus_tag}} </a>
+        {% else %}
+        {{c.locus_tag}} / {{c.type_term.identifier}}
+        {%endif%}
+      </td>
+      <td>{{c.first_location}}</td>
+      <td>
+        {% if c.description %}
+        {{c.description}}
+        {% else %}
+        {{c.extra_gene_props.description}}
+        {% endif %}
+      </td>
+      <td>{{c.extra_gene_props.structures}}</td>
+      <td>{{c.extra_gene_props.variants}}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
 
 <h3 id="variants">Variantes proteicas en LATAM</h3>
 
 
 <div id="variants_output" style="margin: 30px;"></div>
-
 
 
 </div>
@@ -111,12 +111,46 @@
 
 <script>
 
-  const variants_data = JSON.parse($("#variants_data").text()) ;
+  const variants_data = JSON.parse($("#variants_data").text());
   $("#variants_output").pivot(variants_data,
     {
-      rows: ["name","pos","ref","alt"],
+      // rendererOptions: {
+      //   table: {
+      //     clickCallback: function(e, value, filters, pivotData){
+      //       var names = [];
+      //       pivotData.forEachMatchingRecord(filters,
+      //         function(record){ names.push(record.name); });
+      //       if (window.confirm("Visit Name: "+names[0]+"?"))
+      //       {
+      //         var win = window.open('http://linktosite/entry/'+names[0],'_blank');
+      //         win.focus();
+      //       };
+      //     }
+      //   }
+      // },
+      rendererName: "Heatmap",
+      rows: ["name", "pos", "ref", "alt"],
       cols: ["country"]
     });
+  let gene = "";
+  $("#variants_output").find("tr").each((idx, tr) => {
+    if (idx > 1) {
+      const tdEle = (Number.isInteger(parseInt($(tr.children[1]).html()))) ? $(tr.children[1]) : $(tr.children[0]);
+      if (Number.isInteger(parseInt($(tr.children[1]).html()))) {
+        gene = $(tr.children[0]).html();
+      }
+
+      const pos = tdEle.html();
+      if (tdEle.hasClass("pvtRowLabel") && (Number.isInteger(parseInt(pos)))) {
+        tdEle.html("");
+        const url = "{% url 'covid:pos_stats' 'xxx' 0 %}".replace("/0", "/" + pos.toString()).replace("xxx", gene)
+        $("<a />", {href: url}).html(pos).appendTo(tdEle);
+      }
+
+
+    }
+
+  });
   $("#table_variants").hide()
 
 </script>
@@ -135,7 +169,7 @@
     "update_browser_title": false,
     "updateBrowserURL": false,
     // "tracks":"DNA,Genes",
-    "show_fullviewlink":false
+    "show_fullviewlink": false
     // fullviewlink=false&menu=false&nav=true&tracklist=false&tracks=DNA,Genes
   };
 

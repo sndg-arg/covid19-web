@@ -30,11 +30,12 @@ class MSAMap():
         for msa_pos in range(self.aln_len()):
             if msa_pos in self.pos_msa_seq_map[refseq]:
                 ref_pos = self.pos_msa_seq_map[refseq][msa_pos]
-                ref_data = self.seqs[refseq][ref_pos]
+                ref_data = self.seqs[refseq][msa_pos]
+                assert ref_data != "-"
                 variant_id = f"{ref_data}_{ref_pos}"
                 for sample in self.samples():
                     data = self.seqs[sample][msa_pos]
-                    if data == self.gap_code:
+                    if ref_data == self.gap_code:
                         variants[variant_id]["del" + data].append(sample)
                     else:
                         variants[variant_id][data].append(sample)

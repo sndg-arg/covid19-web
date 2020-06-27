@@ -74,21 +74,21 @@
 <!--              </form>-->
 <!--              {% endif %}-->
 <!--            </li>-->
-<!--            {% if request.user.is_authenticated %}-->
-<!--&lt;!&ndash;              <li class="nav-item active">&ndash;&gt;-->
-<!--&lt;!&ndash;                {# URL provided by django-allauth/account/urls.py #}&ndash;&gt;-->
-<!--&lt;!&ndash;                <a class="nav-link" href="{% url 'users:detail' request.user.username  %}">{% trans "My Profile" %}</a>&ndash;&gt;-->
-<!--&lt;!&ndash;              </li>&ndash;&gt;-->
+            {% if request.user.is_authenticated %}
 <!--              <li class="nav-item active">-->
 <!--                {# URL provided by django-allauth/account/urls.py #}-->
-<!--                <a class="nav-link" href="{% url 'account_logout' %}">{% trans "Sign Out" %}</a>-->
+<!--                <a class="nav-link" href="{% url 'users:detail' request.user.username  %}">{% trans "My Profile" %}</a>-->
 <!--              </li>-->
-<!--            {% else %}-->
-<!--              <li class="nav-item active">-->
-<!--                {# URL provided by django-allauth/account/urls.py #}-->
-<!--                <a id="log-in-link" class="nav-link" href="{% url 'account_login' %}">{% trans "Sign In" %}</a>-->
-<!--              </li>-->
-<!--            {% endif %}-->
+              <li class="nav-item active">
+                {# URL provided by django-allauth/account/urls.py #}
+                <a class="nav-link" href="{% url 'account_logout' %}">{% trans "Sign Out" %}</a>
+              </li>
+            {% else %}
+              <li class="nav-item active">
+                {# URL provided by django-allauth/account/urls.py #}
+                <a id="log-in-link" class="nav-link" href="{% url 'account_login' %}">{% trans "Sign In" %}</a>
+              </li>
+            {% endif %}
             <li class="nav-item  active">
               <a class="nav-link" href="http://pais.qb.fcen.uba.ar/"><img src="{% static 'images/external.png' %}" alt="link a proyecto PAIS" /> Proyecto PAIS </a>
             </li>

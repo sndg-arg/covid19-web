@@ -15,6 +15,7 @@ from pdbdb.models import Property
 from bioseq.models.Variant import Variant
 
 # from ..templatetags.bioresources_extras import split
+from . import latam_countries
 
 msa_map = {
     "E": "E_prot.fasta",
@@ -49,9 +50,11 @@ def ProteinView(request, pk):
                             # "dbxrefs__dbxref","qualifiers__term__dbxrefs__dbxref",
                             "features__locations", "features__source_term",  # "dbxrefs__dbxref",
                             "features__type_term__ontology", "features__qualifiers__term"))
+
     dbxss = list(Dbxref.objects.filter(dbxrefs__bioentry_id=pk))
     # .select_related("biodatabase").select_related("taxon")
     be = be.get(bioentry_id=pk)
+    be.genes()
 
     sfid = be.qualifiers_dict()["GFeatureId"]
     feature = Seqfeature.objects.prefetch_related("locations").filter(bioentry__biodatabase__name="COVID19",
@@ -73,13 +76,16 @@ def ProteinView(request, pk):
     pdbxrefs = dbxrefs(dbxss)
     prot_variants = variants(be)
     msa = msa_map.get(be.accession, "")
-    grouped_features = {k:[{y:z for y,z in v.__dict__.items() if y != '_state'} for v in vs ] for k,vs in be.groupedFeatures().items()}
+    grouped_features = {k: [{y: z for y, z in v.__dict__.items() if y != '_state'} for v in vs] for k, vs in
+                        be.groupedFeatures().items()}
 
-    return render(request, 'gene_view.html', { "grouped_features":grouped_features,
-        "functions": functions, "assembly": "assembly", "msa": msa,"variants":prot_variants,
-        "object": be, "feature": feature, "seq": seq, "start": start, "end": end,
-        "protein_features": pfeatures, "structures": structures, "dbxrefs": pdbxrefs,
-        "sidebarleft": 1})
+    return render(request, 'gene_view.html', {"grouped_features": grouped_features,
+                                              "functions": functions, "assembly": "assembly", "msa": msa,
+                                              "variants": prot_variants,
+                                              "object": be, "feature": feature, "seq": seq, "start": start, "end": end,
+                                              "protein_features": pfeatures, "structures": structures,
+                                              "dbxrefs": pdbxrefs,
+                                              "sidebarleft": 1})
 
 
 def dbxrefs(dbxss):
@@ -163,12 +169,15 @@ def variants(protein_entry):
     :return:
     """
     data = []
-    vs = Variant.objects.prefetch_related("samples").filter(bioentry=protein_entry)
-    for variant in vs:
-        for sample_variant in variant.samples.all():
-            sample, gisaid, fecha = sample_variant.name.split("|")
-            _, country, cod, anio = sample.split("/")[:4]
-            if sample_variant.alt != "X":
-                record = {"ref": variant.ref, "pos": variant.pos+1, "alt": sample_variant.alt, "country": country, "cod": cod}
-                data.append(record)
+    vs = Variant.objects.filter(bioentry=protein_entry).values("ref", "sample_variants__alt", "pos",
+                                                               "sample_variants__sample__country",
+                                                               "sample_variants__sample__name")
+    for sample_variant in vs:
+        if ((sample_variant["ref"] != "X") and
+            (sample_variant["sample_variants__sample__country"] in latam_countries)):
+            record = {"ref": sample_variant["ref"], "pos": sample_variant["pos"] ,
+                      "alt": sample_variant["sample_variants__alt"],
+                      "country": sample_variant["sample_variants__sample__country"],
+                      "cod": sample_variant["sample_variants__sample__name"]}
+            data.append(record)
     return data

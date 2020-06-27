@@ -37,7 +37,9 @@ mkdir data/jbrowse/data
 ### Build Front End libraries
 ```bash
 # Install Javascript dependencies
-docker run -u $(id -u):$(id -g) --rm -v $PWD:/out -w /out node:lts npm install
+mkdir data/tmp/
+chmod -R 777 data/tmp/
+docker run -u $(id -u):$(id -g) -v ${PWD}/data/tmp/.npm:/.npm --rm -v $PWD:/out -w /out node:lts npm install
 # Fix old libraries
 sed -i 's|require("bootstrap/js/tooltip.js")|require("bootstrap/js/dist/tooltip.js")|' ./node_modules/feature-viewer/lib/index.js
 sed -i 's|require("bootstrap/js/popover.js")|require("bootstrap/js/dist/popover.js")|' ./node_modules/feature-viewer/lib/index.js
@@ -59,6 +61,7 @@ mkdir data/tmp
 ./manage.py init_db
 ./manage.py import_genome -i data/curated/covid19.gb -a "COVID19" -n "COVID19" -t 2697049
 ./manage.py update_covid_data
+
 ```
     * Annotation
 ```bash

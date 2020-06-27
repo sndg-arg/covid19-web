@@ -65,25 +65,14 @@
 
 
 {% block content %}
-            <h1>{{ object.accession }}</h1>
-            <table class="table  table-responsive">
-                <tr><td><b>Locus Tag</b></td><td>{{ object.accession }}</td></tr>
-                <tr><td><b>Descripción</b></td><td>
-
+            <h1> {{ object.accession }}</h1>
+            <p>
+                  {% if object.accession != object.name %}
                   {{object.name}} <br />
+                  {% endif %}
                   {{object.description}}
+            </p>
 
-                </td></tr>
-              {% if object.genes %}
-                <tr><td><b>Names/Genes</b></td><td>
-                {% for v in object.genes %}
-
-                {{ v }} <br />
-
-                {% endfor %}
-                </td></tr>
-              {% endif %}
-            </table>
 
             {% if functions.biological_process or functions.molecular_function %}
             <h3 id="function">Función</h3>
@@ -487,7 +476,18 @@
                  };
                  const m = msa(opts);
                  $('#msaDiv').data(m);
-                 m.u.file.importURL('{% static "ORFs/"  %}{{msa}}', function(){
+                 m.u.file.importURL('{% static "ORFs/"  %}{{msa}}', function(xx){
+                   m.seqs.models.forEach(seq =>{
+                     try {
+                     const name = Object.keys(seq.attributes.ids)[0].replace("hCoV-19/","");
+                     seq.name = name;
+                     seq.attributes.name = name;
+                     } catch (e) {
+
+                     }
+                   });
+                   m.seqs.comparator = "name";
+                   m.seqs.sort();
                    m.render();
                    $('#msaDiv').parent().css(   "box-sizing", "unset");
                    $(".biojs_msa_marker span").css("white-space" , "nowrap");
@@ -513,6 +513,27 @@
         cols: ["country"]
       });
     $("#table_variants").hide()
+
+  let gene = "";
+  $("#variants_output").find("tr").each((idx, tr) => {
+    if (idx > 1) {
+      const tdEle = (Number.isInteger(parseInt($(tr.children[1]).html()))) ? $(tr.children[1]) : $(tr.children[0]);
+      if (Number.isInteger(parseInt($(tr.children[1]).html()))) {
+        gene = $(tr.children[0]).html();
+      }
+
+      const pos = tdEle.html();
+      if (tdEle.hasClass("pvtRowLabel") && (Number.isInteger(parseInt(pos)))) {
+        tdEle.html("");
+        const url = "{% url 'covid:pos_stats'  object.accession 0 %}".replace("/0", "/" + pos.toString())
+        $("<a />", {href: url}).html(pos).appendTo(tdEle);
+      }
+
+
+    }
+
+  });
+
   {% endif %}
 </script>
 
