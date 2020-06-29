@@ -85,3 +85,5 @@ mkdir data/pdb
     * export DJANGO_SETTINGS_MODULE=config.settings.production
     * mkdir data/static
     * ./manage.py collectstatic 
+    * docker exec sndgr pg_dump -U postgres sndgr | gzip > ./2020_06_02_covid.sql.gz
+    * zcat ./2020_06_02_covid.sql.gz | docker exec -i sndgr psql -U postgres -d covid -

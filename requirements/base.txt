@@ -20,3 +20,4 @@ biopython
 tqdm
 xmltodict
 sndg-bio
+matplotlib

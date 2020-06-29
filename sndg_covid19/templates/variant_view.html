@@ -30,6 +30,9 @@
   </div>
 </div>
 <p> Proporción de los alelos alternativos en los aislamientos por país (acumulativo)</p>
-<img src="{% static '' %}auto/posfigs/{{gene}}{{pos}}.png"/>
 
+{% if fig_avail %}
+<img src="{% static '' %}auto/posfigs/{{gene}}{{pos|add:-1}}.png"/>
+{% eles %}
+<p>Figura no disponible</p>
 {% endblock %}

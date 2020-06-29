@@ -17,20 +17,9 @@ from bioseq.models.Variant import Variant
 # from ..templatetags.bioresources_extras import split
 from . import latam_countries
 
-msa_map = {
-    "E": "E_prot.fasta",
-    "M": "M_prot.fasta",
-    "N": "N_prot.fasta",
-    # "GU280_gp11": "orf10_prot.fasta",
-    "orf1ab": "orf1a_prot.fasta",
-    # "orf1ab_polyprotein": "orf1b_prot.fasta",
-    "NS3": "orf3a_prot.fasta",
-    "NS6": "orf6_prot.fasta",
-    "NS7a": "orf7a_prot.fasta",
-    "NS7b": "orf7b_prot.fasta",
-    "NS8": "orf8_prot.fasta",
-    "S": "S_prot.fasta"
-}
+
+# "GU280_gp11": "orf10_prot.fasta", ??
+
 
 
 def url_map(db_map, dbname, accession):
@@ -75,7 +64,7 @@ def ProteinView(request, pk):
     structures = protein_structures(dbxss)
     pdbxrefs = dbxrefs(dbxss)
     prot_variants = variants(be)
-    msa = msa_map.get(be.accession, "")
+    msa = be.accession + ".faa"
     grouped_features = {k: [{y: z for y, z in v.__dict__.items() if y != '_state'} for v in vs] for k, vs in
                         be.groupedFeatures().items()}
 
@@ -175,7 +164,7 @@ def variants(protein_entry):
     for sample_variant in vs:
         if ((sample_variant["ref"] != "X") and
             (sample_variant["sample_variants__sample__country"] in latam_countries)):
-            record = {"ref": sample_variant["ref"], "pos": sample_variant["pos"] ,
+            record = {"ref": sample_variant["ref"], "pos": sample_variant["pos"] + 1,
                       "alt": sample_variant["sample_variants__alt"],
                       "country": sample_variant["sample_variants__sample__country"],
                       "cod": sample_variant["sample_variants__sample__name"]}

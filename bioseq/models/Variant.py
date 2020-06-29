@@ -27,6 +27,12 @@ class Sample(models.Model):
     gisaid = models.CharField(max_length=255)
     date = models.DateField()
 
+    def __str__(self):
+        return f'{self.name} {self.country} {self.date} {self.gisaid}'
+
+    def __repr__(self):
+        return self.__str__()
+
     class Meta:
         managed = True
         db_table = 'samples'

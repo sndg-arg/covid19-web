@@ -18,7 +18,7 @@ class VariantView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         gene = context["gene"]
-        pos = context["pos"]
+        pos = context["pos"] - 1
 
         context["gene"] = self.kwargs["gene"]
         context["pos"] = self.kwargs["pos"]
@@ -32,9 +32,8 @@ class VariantView(TemplateView):
 
 
 
-        fig_path = f'{STATICFILES_DIRS[0]}/auto/posfigs/{gene.upper()}{pos}.png'
-        if not os.path.exists(fig_path):
-            variant_graphics(gene,pos)
+        context["fig_avail"] =  os.path.exists( f'{STATICFILES_DIRS[0]}/auto/posfigs/{gene}{pos}.png')
+
 
 
         return context

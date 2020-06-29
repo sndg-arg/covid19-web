@@ -76,7 +76,7 @@ def assembly_view(request):
         del x["variant__bioentry__accession"]
         x["ref"] = x["variant__ref"]
         del x["variant__ref"]
-        x["pos"] = x["variant__pos"]
+        x["pos"] = x["variant__pos"] + 1
         del x["variant__pos"]
     sample_vars2 = [x for x in sample_vars if x["country"] in latam_countries]
 

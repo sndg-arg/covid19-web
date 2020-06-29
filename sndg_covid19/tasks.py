@@ -10,6 +10,7 @@ from collections import defaultdict
 import Bio.SeqIO as bpio
 import matplotlib.pyplot as plt
 import pandas as pd
+from matplotlib.patches import Patch
 
 from config.settings.base import STATICFILES_DIRS
 
@@ -21,9 +22,17 @@ from bioseq.io.MSAMap import MSAMap
 fechas = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio"]
 
 from sndg_covid19.io import country_from_gisaid
+import numpy as np
+
+
+def autolabel(ax, y):
+    for i, v in enumerate(y):
+        txt = " ".join([str(int(x)) for x in v if not np.isnan(x)])
+        ax.text(i-0.1, 50, txt, color='black', fontweight='bold')
+
 
 @celery_app.task()
-def variant_graphics(gene: str, pos: int, msamap=None):
+def variant_graphics(gene: str, pos: int,fig_path,msa_file, msamap=None):
     """
     mafft --keeplength --mapout --addfull orf1ab.faa sndg_covid19/static/rawORFs/orf1ab_prot.fasta  > sndg_covid19/static/ORFs/orf1ab_prot.fasta
     orf1ab -> merge of orf1a and orf1b
@@ -31,22 +40,8 @@ def variant_graphics(gene: str, pos: int, msamap=None):
     :param pos:
     :return:
     """
-    fig_path = f'{STATICFILES_DIRS[0]}/auto/posfigs/{gene}{pos}.png'
-    msa_map = {
-        "E": "E_prot.fasta",
-        "M": "M_prot.fasta",
-        "N": "N_prot.fasta",
-        "orf1ab": "orf1ab_prot.fasta",
-        "NS3": "orf3a_prot.fasta",
-        "NS6": "orf6_prot.fasta",
-        "NS7a": "orf7a_prot.fasta",
-        "NS7b": "orf7b_prot.fasta",
-        "NS8": "orf8_prot.fasta",
-        "S": "S_prot.fasta"
-    }
-    msa_map = {k: f'{STATICFILES_DIRS[0]}/ORFs/{v}' for k, v in msa_map.items()}
 
-    msa_file = msa_map[gene]
+
 
     msa = bpio.to_dict(bpio.parse(msa_file, "fasta"))
 
@@ -85,6 +80,16 @@ def variant_graphics(gene: str, pos: int, msamap=None):
         return
 
     df = df[df.aa != "X"]
+    cmap = plt.cm.coolwarm
+
+    handles = []
+    color_map = {}
+    aas = df.aa.unique()
+    for idx2, aa in enumerate(aas):
+        color = cmap(1 * idx2 / len(aas))
+        color_map[aa] = color
+        # handle = Patch(facecolor=color, edgecolor=color, label=aa)
+        # handles.append(handle)
 
     # df = pd.DataFrame(final, columns=["month"] + latam)
     # d1 = df.set_index(['month']).sort_index()
@@ -99,11 +104,21 @@ def variant_graphics(gene: str, pos: int, msamap=None):
                 for aa in aas:
                     dfp = dfp.append({"aa": aa, "count": 0, "month": month}, ignore_index=True)
 
-        dfp["month"] = [fechas[f] for f in dfp.month]
-        dfp = pd.pivot(dfp, index="month", columns="aa", values="prop")
-        dfp.index = [x for i, x in enumerate(fechas[1:]) if i < len(dfp.index.unique())]
-        ax = dfp.plot(kind='bar', title=country, stacked=True, ax=axs.flat[idx])
+        dfp["month"] = [fechas[f] for f in list(dfp.month)]
+        dfp.country.fillna(country,inplace=True)
+        dfp.prop.fillna(0,inplace=True)
+        dfp2 = pd.pivot(dfp, index="month", columns="aa", values="prop")
+        dfp2 = dfp2.reindex(sorted(dfp2.index,key=lambda x: fechas.index(x)  ))
+
+        ax = dfp2.plot(kind='bar', title=country, stacked=True, ax=axs.flat[idx],
+                       color=[color_map[x] for x in [aa for aa in aas if aa in list(dfp.aa.unique())]])
         ax.set_ylabel("%")
         ax.set_xlabel("Mes")
-        ax.legend(title="")
+        # ax.legend(handles=handles, title="")
+
+        dfp2 = pd.pivot(dfp, index="month", columns="aa", values="count")
+
+        dfp2 = dfp2.reindex(sorted(dfp2.index,key=lambda x: fechas.index(x)  ))
+
+        autolabel(ax, list(dfp2.values))
     plt.savefig(fig_path)
