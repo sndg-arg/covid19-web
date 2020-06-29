@@ -1,25 +1,24 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
-from django.utils.translation import gettext_lazy as __
+
+import os
+
 # from django.shortcuts import redirect, reverse
 from django.shortcuts import render
 
 from bioseq.models.Bioentry import Bioentry
-from bioseq.models.Biodatabase import Biodatabase
-from bioseq.models.Seqfeature import Seqfeature
 from bioseq.models.Biosequence import Biosequence
 from bioseq.models.Dbxref import DBx, Dbxref
+from bioseq.models.Seqfeature import Seqfeature
+from bioseq.models.Variant import Variant
+from config.settings.base import STATICFILES_DIRS
 from pdbdb.models import PDB
 from pdbdb.models import Property
-
-from bioseq.models.Variant import Variant
-
 # from ..templatetags.bioresources_extras import split
 from . import latam_countries
 
 
 # "GU280_gp11": "orf10_prot.fasta", ??
-
 
 
 def url_map(db_map, dbname, accession):
@@ -64,7 +63,11 @@ def ProteinView(request, pk):
     structures = protein_structures(dbxss)
     pdbxrefs = dbxrefs(dbxss)
     prot_variants = variants(be)
+
     msa = be.accession + ".faa"
+    msa_file = f'{STATICFILES_DIRS[0]}/ORFs/{msa}'
+    if not os.path.exists(msa_file):
+        msa = None
     grouped_features = {k: [{y: z for y, z in v.__dict__.items() if y != '_state'} for v in vs] for k, vs in
                         be.groupedFeatures().items()}
 
