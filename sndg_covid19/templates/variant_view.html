@@ -33,6 +33,6 @@
 
 {% if fig_avail %}
 <img src="{% static '' %}auto/posfigs/{{gene}}{{pos|add:-1}}.png"/>
-{% eles %}
+{% else %}
 <p>Figura no disponible</p>
 {% endblock %}
