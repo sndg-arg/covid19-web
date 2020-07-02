@@ -66,10 +66,15 @@ RUN echo "  covid19.chromosomes : MN996528" >> /app/snpEff/snpEff.config
 RUN cd /app/snpEff && java -jar snpEff.jar build -genbank -v covid19
 
 ENV PATH $PATH:/app/MEGAHIT-1.2.9-Linux-x86_64-static/bin/:/app/bbmap/:/app/script/
+
+
 COPY process_sample.sh /app/script/
 COPY process_batch.py /app/script/
+COPY MSAMap.py /app/script/
 COPY process_assembly.py /app/script/
-RUN chmod +x  /app/script/process_sample.sh  /app/script/process_batch.py /app/script/process_assembly.py
+
+
+RUN chmod +x  /app/script/process_sample.sh  /app/script/process_batch.py /app/script/process_assembly.py /app/script/MSAMap.py
 
 RUN groupadd covid && useradd -r -u 1000 -g covid covid
 USER covid

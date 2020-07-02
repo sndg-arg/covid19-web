@@ -40,4 +40,7 @@ with tqdm(muestras.items()) as pbar:
             os.makedirs(args.dir_salida + "/" + k)
         cmd = f'process_sample.sh {v[0]} {v[1]} {k} {args.dir_salida} > {args.dir_salida}/{k}/log.txt   2>&1'
         sp.call(cmd, shell=True)
-        shutil.copy(f"{args.dir_salida}/{k}/{k}_consensus.fasta",f"{args.dir_salida}/FASTA")
+        try:
+            shutil.copy(f"{args.dir_salida}/{k}/{k}_consensus.fasta",f"{args.dir_salida}/FASTA")
+        except:
+            sys.stderr.write(f"error al procesar {k}\n")
