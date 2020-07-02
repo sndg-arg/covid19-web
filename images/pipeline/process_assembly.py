@@ -21,28 +21,26 @@ def exec(cmd, verbose=False):
     sp.call(cmd, shell=True)
 
 
-
 def sample_file(item):
     fasta_path = f'/tmp/{item.id.replace("/", "_").replace(" ", "_").replace("|", "_")}.fasta'
     bpio.write(item, fasta_path, "fasta")
     return fasta_path
 
-def get_codon( pos, genes_dict, gene):
+
+def get_codon(pos, genes_dict, gene):
     pos_in_genome = pos + int(genes_dict[gene]["gapped_coding_location"][0][0])
     cant_aa = 0
     for cr in genes_dict[gene]["gapped_coding_location"]:
         cant_aa += int((int(cr[0]) - int(genes_dict[gene]["gapped_coding_location"][0][0]) + 1) / 3)
         if int(cr[0]) <= pos_in_genome and pos_in_genome < int(cr[1]):
-            pos_aa = cant_aa + (int((pos_in_genome - int(cr[0]))/3)) + 1
-            rest = (pos_in_genome - int(cr[0]) + 1)/3 - int((pos_in_genome - int(cr[0]) + 1)/3)
+            pos_aa = cant_aa + (int((pos_in_genome - int(cr[0])) / 3)) + 1
+            rest = (pos_in_genome - int(cr[0]) + 1) / 3 - int((pos_in_genome - int(cr[0]) + 1) / 3)
             if rest == 0:
-                return (pos-2, pos+1, pos_aa)
+                return (pos - 2, pos + 1, pos_aa)
             elif rest > 0.5:
-                return (pos-1, pos+2, pos_aa)
+                return (pos - 1, pos + 2, pos_aa)
             else:
-                return (pos, pos+3, pos_aa)
-
-
+                return (pos, pos + 3, pos_aa)
 
 
 ###main
@@ -52,8 +50,8 @@ parser.add_argument("-i", '--fasta', type=str, help='directorio de fastas no ali
 parser.add_argument("-o", '--dir_salida', type=str, help='Directorio donde se ponen los reportes de salida')
 parser.add_argument("-p", '--primers', type=str, help='fasta con primers')
 parser.add_argument("-v", '--verbose', action='store_true')
-parser.add_argument("-r", '--reference', help="fasta reference",default="/ref/MN996528.fna")
-parser.add_argument("-a", '--annotation', help="fasta reference",default="/ref/MN996528.gb")
+parser.add_argument("-r", '--reference', help="fasta reference", default="/ref/MN996528.fna")
+parser.add_argument("-a", '--annotation', help="fasta reference", default="/app/snpEff/data/covid19/genes.gbk")
 args = parser.parse_args()
 
 """
@@ -73,28 +71,24 @@ assert os.path.exists(din), f"no existe el directorio de entrada {din}"
 if not os.path.exists(out):
     os.makedirs(out)
 
-
 assert os.path.exists(args.reference), f"no existe la referencia {args.reference}"
 assert os.path.exists(args.annotation), f"no existe la anotacion {args.annotation}"
 
 if os.path.isdir(din):
     pbar = tqdm(glob(f'{din}/*.fasta'))
     sample_fn = lambda item: os.path.basename(item).split(".fasta")[0]
-    sample_file = lambda item: fasta_file
+    sample_file = lambda item: item
 else:
     pbar = tqdm(list(bpio.parse(din, "fasta")))
     sample_fn = lambda item: item.id.replace("/", "_").replace(" ", "_").replace("|", "_")
-
-
-
 
 general_report = "Secuencia\tReferencia usada\tLargo (nt)\t# Ns\t%Ns\tGenes completos\tGenes incompletos\tGenes no encontrados\t# Mut. (nt)\t% Mut.\t# Mut. Sin.\t# Mut. No Sin.\n"
 genes_report = "Gen\tMuestra\tLargo\tInicio\tFin\tBases_identicas\tMismatches\tInserciones\tDeleciones\tNs\tMutaciones_sinonimas\tMutaciones_no_sinonimas\n"
 record = bpio.read(args.annotation, "genbank")
 ref_id = record.id
 
-with open(f"{out}/primers.txt","w") as hw:
-    hw.write("#sample\tpos_start\tpos_end\tvariant\tprimer\n")
+with open(f"{out}/primers.txt", "w") as hw:
+    hw.write("#sample\tprimer\tpos\tvariant\n")
 
 for item in pbar:
     fasta_file = sample_file(item)
@@ -104,7 +98,6 @@ for item in pbar:
     genomes = {}
     ref_genes = {}
     sample_genes = {}
-
 
     if not os.path.exists(f"{out}/samples/{sample}"):
         os.makedirs(f"{out}/samples/{sample}")
@@ -117,46 +110,46 @@ for item in pbar:
     ## Read reference
     for feature in record.features:
         if feature.type == "CDS" or feature.type == "mat_peptide":
-            locations = re.findall( '\[(\d+)\:(\d+)\]' , str(feature.location))
+            locations = re.findall('\[(\d+)\:(\d+)\]', str(feature.location))
             ref_genes[feature.qualifiers['product'][0]] = {
-                "length" : (int(locations[-1][1]) - int(locations[0][0])),
-                "coding_location" : locations, # positions of coding regions (in case there's splicing)
-                "coding_regions" : len(locations) #number of coding regions
+                "length": (int(locations[-1][1]) - int(locations[0][0])),
+                "coding_location": locations,  # positions of coding regions (in case there's splicing)
+                "coding_regions": len(locations)  # number of coding regions
             }
 
     ##  Read MSA ##
-    msa_dict = bpio.to_dict( bpio.parse(msa, "fasta"))
+    msa_dict = bpio.to_dict(bpio.parse(msa, "fasta"))
     assert ref_id in msa_dict, f"ref {ref_id} not found in msa ({','.join(msa_dict)})"
 
     for seq_record in msa_dict.values():
         list_gaps = []
         list_ns = []
         length = len(str(seq_record.seq))
-        Ns=0
+        Ns = 0
         if seq_record.id != ref_id:
             sample_id = seq_record.id
 
-        gap_iter = re.finditer( '-+' , str(seq_record.seq))
+        gap_iter = re.finditer('-+', str(seq_record.seq))
         for match in gap_iter:
             list_gaps.append((match.span()[0], match.span()[1]))
             length = length - match.span()[1] + match.span()[0]
-        n_iter = re.finditer( 'n+' , str(seq_record.seq).lower())
+        n_iter = re.finditer('n+', str(seq_record.seq).lower())
         for match in n_iter:
             Ns += match.span()[1] - match.span()[0]
             if (match.span()[1] - match.span()[0] >= 20):
                 list_ns.append((match.span()[0], match.span()[1]))
 
-        genomes[seq_record.id] = {"Ns" : Ns,
-                                  "gaps" : list_gaps,
-                                  "n_islands" : list_ns,
-                                  "length" : length,
-                                  "seq" : str(seq_record.seq).lower(),
-                                  "mut" : 0,
-                                  "syn_mut" : 0,
-                                  "non_syn_mut" : 0,
-                                  "complete_genes" : [],
-                                  "incomplete_genes" : [],
-                                  "absent_genes" : []
+        genomes[seq_record.id] = {"Ns": Ns,
+                                  "gaps": list_gaps,
+                                  "n_islands": list_ns,
+                                  "length": length,
+                                  "seq": str(seq_record.seq).lower(),
+                                  "mut": 0,
+                                  "syn_mut": 0,
+                                  "non_syn_mut": 0,
+                                  "complete_genes": [],
+                                  "incomplete_genes": [],
+                                  "absent_genes": []
                                   }
         del seq_record
 
@@ -167,13 +160,13 @@ for item in pbar:
             for m in ref_genes[gene]["coding_location"]:
                 new_start = int(m[0])
                 new_end = int(m[1])
-                for gap_start,gap_end in (reversed(genomes[ref_id]['gaps'])):
+                for gap_start, gap_end in (reversed(genomes[ref_id]['gaps'])):
                     if new_start >= gap_end:
                         new_start += gap_end - gap_start
                         new_end += gap_end - gap_start
                     elif new_start < gap_start and new_end >= gap_end:
                         new_end += gap_end - gap_start
-                ref_genes[gene]["gapped_coding_location"].append((new_start,new_end))
+                ref_genes[gene]["gapped_coding_location"].append((new_start, new_end))
         else:
             ref_genes[gene]["gapped_coding_location"] = ref_genes[gene]["coding_location"]
 
@@ -210,7 +203,8 @@ for item in pbar:
             bool_island = 0
             if ref_genes[gene]["dna_seq"][i] != sample_genes[gene]["dna_seq"][i]:
                 for island in genomes[sample_id]["n_islands"]:
-                    if island[0] <= (i+int(ref_genes[gene]["coding_location"][0][0])) and (i+int(ref_genes[gene]["coding_location"][0][0])) < island[1]:
+                    if island[0] <= (i + int(ref_genes[gene]["coding_location"][0][0])) and (
+                        i + int(ref_genes[gene]["coding_location"][0][0])) < island[1]:
                         bool_island = 1
                 if bool_island == 1:
                     continue
@@ -218,57 +212,64 @@ for item in pbar:
                 sample_genes[gene]["mut"] += 1
                 (start, end, aa_pos) = get_codon(i, ref_genes, gene)
 
-                ref_aa = str(Seq(str(ref_genes[gene]["dna_seq"][start:end]),generic_dna).translate(gap="-"))
-                while re.search( '^-+$', str(ref_genes[gene]["dna_seq"][start:end])):
+                ref_aa = str(Seq(str(ref_genes[gene]["dna_seq"][start:end]), generic_dna).translate(gap="-"))
+                while re.search('^-+$', str(ref_genes[gene]["dna_seq"][start:end])):
                     start -= 3
-                    ref_aa = str(Seq(str(ref_genes[gene]["dna_seq"][start:end]),generic_dna).translate(gap="-"))
-                    if not (start, start+3) in ref_genes[gene]["gaps"]:
-                        ref_genes[gene]["gaps"].append((start,start+3))
+                    ref_aa = str(Seq(str(ref_genes[gene]["dna_seq"][start:end]), generic_dna).translate(gap="-"))
+                    if not (start, start + 3) in ref_genes[gene]["gaps"]:
+                        ref_genes[gene]["gaps"].append((start, start + 3))
                 ref_aa = ref_aa.replace("-", "")
                 try:
                     # TODO ver con mati que puede estar pasando
-                    #Bio.Data.CodonTable.TranslationError: Codon '-TT' is invalid
-                    sample_aa = Seq(str(sample_genes[gene]["dna_seq"][start:end]),generic_dna).translate(gap="-")
+                    # Bio.Data.CodonTable.TranslationError: Codon '-TT' is invalid
+                    sample_aa = Seq(str(sample_genes[gene]["dna_seq"][start:end]), generic_dna).translate(gap="-")
                 except:
                     sample_aa = "N"
                 if ref_aa != sample_aa:
-                    mut=ref_aa[0]+str(aa_pos)+sample_aa[0]
+                    mut = ref_aa[0] + str(aa_pos) + sample_aa[0]
                     genomes[sample_id]["non_syn_mut"] += 1
-                    sample_genes[gene]["non_syn_mut"][aa_pos-len(ref_genes[gene]["gaps"])+1] = {"ref" : str(ref_aa), "alt" : str(sample_aa), "kind" : "prot"}
+                    sample_genes[gene]["non_syn_mut"][aa_pos - len(ref_genes[gene]["gaps"]) + 1] = {"ref": str(ref_aa),
+                                                                                                    "alt": str(
+                                                                                                        sample_aa),
+                                                                                                    "kind": "prot"}
                 else:
-                    sample_genes[gene]["syn_mut"][int(i+1-(len(ref_genes[gene]["gaps"])*3))] = {"ref" : ref_genes[gene]["dna_seq"][i], "alt" : sample_genes[gene]["dna_seq"][i]}
-                    mut = (ref_genes[gene]["dna_seq"][i]+str(i+1)+sample_genes[gene]["dna_seq"][i]).upper()
+                    sample_genes[gene]["syn_mut"][int(i + 1 - (len(ref_genes[gene]["gaps"]) * 3))] = {
+                        "ref": ref_genes[gene]["dna_seq"][i], "alt": sample_genes[gene]["dna_seq"][i]}
+                    mut = (ref_genes[gene]["dna_seq"][i] + str(i + 1) + sample_genes[gene]["dna_seq"][i]).upper()
                     genomes[sample_id]["syn_mut"] += 1
             else:
                 sample_genes[gene]["ident"] += 1
 
     ## Printing outputs ##
-    general_report += sample_id+"\t"+ref_id+"\t"
-    general_report += str(genomes[sample_id]["length"])+"\t"
-    general_report += str(genomes[sample_id]["Ns"])+"\t"
-    general_report += str(round(genomes[sample_id]["Ns"]/genomes[sample_id]["length"],2))+"\t"
-    general_report += str(len(genomes[sample_id]["complete_genes"]))+"\t"
-    general_report += str(len(genomes[sample_id]["incomplete_genes"]))+"\t"
-    general_report += str(len(genomes[sample_id]["absent_genes"]))+"\t"
-    general_report += str(genomes[sample_id]["mut"])+"\t"
-    general_report += str(round(genomes[sample_id]["mut"]/genomes[sample_id]["length"],2))+"\t"
-    general_report += str(genomes[sample_id]["syn_mut"])+"\t"
-    general_report += str(genomes[sample_id]["non_syn_mut"])+"\n"
+    general_report += sample_id + "\t" + ref_id + "\t"
+    general_report += str(genomes[sample_id]["length"]) + "\t"
+    general_report += str(genomes[sample_id]["Ns"]) + "\t"
+    general_report += str(round(genomes[sample_id]["Ns"] / genomes[sample_id]["length"], 2)) + "\t"
+    general_report += str(len(genomes[sample_id]["complete_genes"])) + "\t"
+    general_report += str(len(genomes[sample_id]["incomplete_genes"])) + "\t"
+    general_report += str(len(genomes[sample_id]["absent_genes"])) + "\t"
+    general_report += str(genomes[sample_id]["mut"]) + "\t"
+    general_report += str(round(genomes[sample_id]["mut"] / genomes[sample_id]["length"], 2)) + "\t"
+    general_report += str(genomes[sample_id]["syn_mut"]) + "\t"
+    general_report += str(genomes[sample_id]["non_syn_mut"]) + "\n"
 
     for gene in ref_genes:
-        genes_report += gene+"\t"+sample_id+"\t"+str(ref_genes[gene]["length"])+"\t"
-        genes_report += ref_genes[gene]["coding_location"][0][0]+"\t"+ref_genes[gene]["coding_location"][-1][1]+"\t"
-        genes_report += str(sample_genes[gene]["ident"])+"\t"
-        genes_report += str(sample_genes[gene]["mut"])+"\t"
-        genes_report += str(sample_genes[gene]["insertions"])+"\t"
-        genes_report += str(sample_genes[gene]["deletions"])+"\t"
-        genes_report += str(sample_genes[gene]["Ns"])+"\t"
+        genes_report += gene + "\t" + sample_id + "\t" + str(ref_genes[gene]["length"]) + "\t"
+        genes_report += ref_genes[gene]["coding_location"][0][0] + "\t" + ref_genes[gene]["coding_location"][-1][
+            1] + "\t"
+        genes_report += str(sample_genes[gene]["ident"]) + "\t"
+        genes_report += str(sample_genes[gene]["mut"]) + "\t"
+        genes_report += str(sample_genes[gene]["insertions"]) + "\t"
+        genes_report += str(sample_genes[gene]["deletions"]) + "\t"
+        genes_report += str(sample_genes[gene]["Ns"]) + "\t"
         for m in sample_genes[gene]["syn_mut"]:
-            genes_report += str(sample_genes[gene]["syn_mut"][m]["ref"])+str(m)+str(sample_genes[gene]["syn_mut"][m]["alt"])+";"
+            genes_report += str(sample_genes[gene]["syn_mut"][m]["ref"]) + str(m) + str(
+                sample_genes[gene]["syn_mut"][m]["alt"]) + ";"
         genes_report = genes_report.rstrip(';')
         genes_report += "\t"
         for m in sample_genes[gene]["non_syn_mut"]:
-            genes_report += str(sample_genes[gene]["non_syn_mut"][m]["ref"])+str(m)+str(sample_genes[gene]["non_syn_mut"][m]["alt"])+";"
+            genes_report += str(sample_genes[gene]["non_syn_mut"][m]["ref"]) + str(m) + str(
+                sample_genes[gene]["non_syn_mut"][m]["alt"]) + ";"
         genes_report = genes_report.rstrip(';')
         genes_report += "\n"
 
@@ -278,10 +279,11 @@ for item in pbar:
         cmd = f'python3 /app/script/MSAMap.py -r MN996528.1  -i {msa} >> "{out}/samples/{sample}/{sample}_variants.vcf" 2>>"{out}/samples/{sample}/log.txt"'
         exec(cmd, verbose=verbose)
 
-        cmd = f'java -jar /app/snpEff/snpEff.jar -stats {out}/samples/{sample}/snpEff covid19  "{out}/samples/{sample}/{sample}_variants.vcf" > "{out}/samples/{sample}/{sample}_ann.vcf" 2>>"{out}/samples/{sample}/log.txt"'
+        cmd = f'java -jar /app/snpEff/snpEff.jar -stats {out}/samples/{sample}/snpEff.html covid19  "{out}/samples/{sample}/{sample}_variants.vcf" > "{out}/samples/{sample}/{sample}_ann.vcf" 2>>"{out}/samples/{sample}/log.txt"'
         exec(cmd, verbose=verbose)
 
-        with open(f'{out}/samples/{sample}/{sample}_ann.vcf') as h, open(f'{out}/samples/{sample}/{sample}_vars.txt', "w") as hw:
+        with open(f'{out}/samples/{sample}/{sample}_ann.vcf') as h, open(f'{out}/samples/{sample}/{sample}_vars.txt',
+                                                                         "w") as hw:
             hw.write("pos ref alt annotation gene hgvs_c hgvs_p\n")
             for line in h:
                 if not line.startswith("#"):
@@ -293,7 +295,6 @@ for item in pbar:
                      errors) = ann_str.split("|")
                     hw.write(" ".join([pos, ref, alt, annotation, gene, hgvs_c, hgvs_p]) + "\n")
 
-
         cmd = f'blastn -task "blastn-short"  -query {primers} -db {args.reference} -qcov_hsp_perc 100 -outfmt "6 sseqid sstart send qseqid" > /tmp/{sample}primers_raw.bed 2>/dev/null'
         exec(cmd, verbose=verbose)
         with open(f"/tmp/{sample}primers.bed", "w") as h:
@@ -304,25 +305,32 @@ for item in pbar:
                 h.write("\t".join(vec))
         cmd = f'bedtools  intersect -a "{out}/samples/{sample}/{sample}_ann.vcf" -b "/tmp/{sample}primers.bed"  -wb > "/tmp/{sample}primers.intersect" 2>>"{out}/samples/{sample}/log.txt"'
         exec(cmd, verbose=verbose)
-        with open(f'/tmp/{sample}primers.intersect') as h, open(f'{out}/samples/{sample}/{sample}_primers.txt', "w") as hw:
-            hw.write("#sample\tpos_start\tpos_end\tvariant\tprimer\n")
+        with open(f'/tmp/{sample}primers.intersect') as h, \
+            open(f'{out}/samples/{sample}/{sample}_primers.txt',   "w") as hw:
+            hw.write("#sample\tprimer\tpos\tvariant\n")
             for line in h:
                 vec = line.strip().split()
                 # MN996528.1      3037    .       C       T       225     .       DP=26;VDB=0.343005;SGB=-0.690438;MQSB=1;MQ0F=0;AC=1;AN=1;DP4=0,0,5,12;MQ=60     GT:PL   1:255,0 MN996528.1      3028    3047    p2
                 pos, ref, alt, primer, pstart, pend = int(vec[1]), vec[3], vec[4], vec[-1], int(vec[-3]), int(vec[-2])
                 vcf_end = pos + len(ref) - 1
-                start,end = max(pos, pstart), min(vcf_end, pend)
+                start, end = max(pos, pstart), min(vcf_end, pend)
                 if len(ref) > len(alt):
-                    alt = f'{ref}-DELsize-{len(ref) - len(alt)}'
+                    alt = f'NotFound -> Deletion at {pos} of {len(ref) - len(alt)}bps'
                 elif len(ref) < len(alt):
-                    alt = f'{ref}-INSsize-{len(alt) - len(ref)}'
+                    alt = f'Insertion at {pos} of {len(alt) - len(ref)}bps'
                 else:
-                    alt = f'{ref}->{alt}'
-                hw.write("\t".join([sample,str(start),str(end),  alt, primer]) + "\n")
+                    if len(ref) == 1:
+                        alt = f'{ref}->{alt}'
+                    else:
+                        if "N" in alt:
+                            alt = "Presence of Ns in the region"
+                        else:
+                            alt = f'{ref[max(pos, start) - pos:end - pos]}->{alt[max(pos, pstart) - pstart:end - pstart]}'
+                hw.write("\t".join([sample, primer, str(start), alt]) + "\n")
 
         cmd = f'grep -v "^#" "{out}/samples/{sample}/{sample}_primers.txt" >> {out}/primers.txt'
         exec(cmd, verbose=verbose)
 
 with open(f"{out}/output_general.tsv", 'w') as general_output, open(f"{out}/output_genes.tsv", 'w') as genes_output:
-    print (general_report, file=general_output)
-    print (genes_report, file=genes_output)
+    print(general_report, file=general_output)
+    print(genes_report, file=genes_output)
