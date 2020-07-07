@@ -42,9 +42,9 @@ def get_codon(pos, genes_dict, gene):
 
 def fix_msa (genes, gene):
 	new_seq  = ''
+	i = 0
 	for loc in genes[gene]["gapped_coding_location"]:
-		i = int(loc[0])
-		while i < int(loc[1]):
+		while i < (int(loc[1]) - int(loc[0])):
 			codon = genes[gene]["dna_seq"][i:i+3]
 			if '-' in codon:
 				extra_seq = ''
@@ -223,7 +223,7 @@ for item in pbar:
                 sample_genes[gene]["syn_mut"] = {}
                 fix_msa(ref_genes, gene)
                 fix_msa(sample_genes, gene)
-
+        
     ## Compare genes ##
     for gene in ref_genes:
         ref_genes[gene]["gaps"] = []
@@ -249,6 +249,8 @@ for item in pbar:
                 ref_aa = ref_aa.replace("-", "")
                 if "-" not in str(sample_genes[gene]["dna_seq"][start:end]):
                     sample_aa = Seq(str(sample_genes[gene]["dna_seq"][start:end])).translate()
+                    if sample_aa == "*":
+                        sample_aa = "STOP"
                 elif str(sample_genes[gene]["dna_seq"][start:end]) == "---" :
                     sample_aa = "-"
                 else:
@@ -259,9 +261,7 @@ for item in pbar:
                     mut = ref_aa[0] + str(aa_pos) + sample_aa[0]
                     genomes[sample_id]["non_syn_mut"] += 1
                     sample_genes[gene]["non_syn_mut"][aa_pos - len(ref_genes[gene]["gaps"]) + 1] = {"ref": str(ref_aa),
-                                                                                                    "alt": str(
-                                                                                                        sample_aa),
-                                                                                                    "kind": "prot"}
+                                                                                                    "alt": str(sample_aa)}
                 else:
                     sample_genes[gene]["syn_mut"][int(i + 1 - (len(ref_genes[gene]["gaps"]) * 3))] = {
                         "ref": ref_genes[gene]["dna_seq"][i], "alt": sample_genes[gene]["dna_seq"][i]}
