@@ -274,6 +274,7 @@ for item in pbar:
     general_report += sample_id + "\t" + ref_id + "\t"
     general_report += str(genomes[sample_id]["length"]) + "\t"
     general_report += str(genomes[sample_id]["Ns"]) + "\t"
+    #general_report += str(round(genomes[sample_id]["Ns"] / genomes[sample_id]["length"], 4)*100) + "\t"
     general_report += str(round(genomes[sample_id]["Ns"] / genomes[sample_id]["length"], 2)) + "\t"
     general_report += str(len(genomes[sample_id]["complete_genes"])) + "\t"
     general_report += str(len(genomes[sample_id]["incomplete_genes"])) + "\t"
