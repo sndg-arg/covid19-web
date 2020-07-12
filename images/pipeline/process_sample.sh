@@ -1,3 +1,4 @@
+#!/bin/bash
 SAMPLE_R1=$1
 SAMPLE_R2=$2
 SAMPLE_NAME=$3
@@ -42,7 +43,7 @@ IN2=$SAMPLE_R2
 OUT1=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_1_dedupped.fastq
 OUT2=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_2_dedupped.fastq
 
-if [[ "$IN1" == *.gz ]]
+if [[ "${IN1}" == *.gz ]]
 then
     gz="gzfastq "
 else
