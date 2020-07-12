@@ -266,7 +266,7 @@ for item in pbar:
                 if ref_aa != sample_aa:
                     mut = ref_aa[0] + str(aa_pos) + sample_aa[0]
                     genomes[sample_id]["non_syn_mut"] += 1
-                    sample_genes[gene]["non_syn_mut"][aa_pos - len(ref_genes[gene]["gaps"]) + 1] = {"ref": str(ref_aa),
+                    sample_genes[gene]["non_syn_mut"][aa_pos - len(ref_genes[gene]["gaps"])] = {"ref": str(ref_aa),
                                                                                                     "alt": str(sample_aa)}
                 else:
                     sample_genes[gene]["syn_mut"][int(i + 1 - (len(ref_genes[gene]["gaps"]) * 3))] = {
