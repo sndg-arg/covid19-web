@@ -46,13 +46,13 @@ def get_codon(pos, genes_dict, gene):
                 return (pos, pos + 3, pos_aa)
 
 def fix_msa (genes, gene):
-    new_seq  = ''
     i = 0
     for loc in genes[gene]["gapped_coding_location"]:
         while i < (int(loc[1]) - int(loc[0])):
             codon = genes[gene]["dna_seq"][i:i+3]
             if '-' in codon:
                 extra_seq = ''
+                start = i
                 i += 3
                 next_codon = genes[gene]["dna_seq"][i:i+3]
                 while next_codon == '---':
@@ -61,16 +61,11 @@ def fix_msa (genes, gene):
                     next_codon = genes[gene]["dna_seq"][i:i+3]
                 if re.search( '\w\w-', codon) and re.search( '--\w', next_codon):
                     new_codon = codon[0:2] + next_codon[-1]
-                    new_seq = new_seq + new_codon + extra_seq + "---"
+                    genes[gene]["dna_seq"] = genes[gene]["dna_seq"][:start] + codon + extra_seq + "---" + genes[gene]["dna_seq"][i+3:]
                 elif re.search( '\w--', codon) and re.search( '-\w\w', next_codon):
                     new_codon = codon[0] + next_codon[1:3]
-                    new_seq = new_seq + "---" + extra_seq + new_codon
-                else:
-                    new_seq = new_seq + codon + extra_seq + next_codon
-            else:
-                new_seq += codon
+                    genes[gene]["dna_seq"] = genes[gene]["dna_seq"][:start] + "---" + extra_seq + codon + genes[gene]["dna_seq"][i+3:]
             i += 3
-    genes[gene]["dna_seq"] = new_seq
 
 
 ###main
