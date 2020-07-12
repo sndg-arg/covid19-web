@@ -55,7 +55,11 @@ RUN apt install -y seqtk
 RUN apt install -y mafft
 RUN apt install -y snp-sites
 
+RUN wget -O /app/gatk.zip "https://github.com/broadinstitute/gatk/releases/download/4.1.8.0/gatk-4.1.8.0.zip" && \
+    cd /app && unzip gatk.zip && rm /app/gatk.zip && mv /app/gatk-4.1.8.0 /app/gatk
 
+RUN wget -O /app/stacks.tar.gz "https://catchenlab.life.illinois.edu/stacks/source/stacks-2.53.tar.gz" && \
+    cd /app && tar xfv /app/stacks.tar.gz && rm /app/stacks.tar.gz && cd stacks-2.53 && ./configure && make && make install
 
 COPY adapters.fasta /ref/
 COPY orfs.fna /ref/

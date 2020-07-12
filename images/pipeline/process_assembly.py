@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+
+__author__ = "Ezequiel Sosa - Matias Irazoqui"
+
 from tqdm import tqdm
 import argparse
 import os
@@ -41,6 +44,33 @@ def get_codon(pos, genes_dict, gene):
                 return (pos - 1, pos + 2, pos_aa)
             else:
                 return (pos, pos + 3, pos_aa)
+
+def fix_msa (genes, gene):
+    new_seq  = ''
+    i = 0
+    for loc in genes[gene]["gapped_coding_location"]:
+        while i < (int(loc[1]) - int(loc[0])):
+            codon = genes[gene]["dna_seq"][i:i+3]
+            if '-' in codon:
+                extra_seq = ''
+                i += 3
+                next_codon = genes[gene]["dna_seq"][i:i+3]
+                while next_codon == '---':
+                    extra_seq += next_codon
+                    i += 3
+                    next_codon = genes[gene]["dna_seq"][i:i+3]
+                if re.search( '\w\w-', codon) and re.search( '--\w', next_codon):
+                    new_codon = codon[0:2] + next_codon[-1]
+                    new_seq = new_seq + new_codon + extra_seq + "---"
+                elif re.search( '\w--', codon) and re.search( '-\w\w', next_codon):
+                    new_codon = codon[0] + next_codon[1:3]
+                    new_seq = new_seq + "---" + extra_seq + new_codon
+                else:
+                    new_seq = new_seq + codon + extra_seq + next_codon
+            else:
+                new_seq += codon
+            i += 3
+    genes[gene]["dna_seq"] = new_seq
 
 
 ###main
@@ -86,9 +116,10 @@ general_report = "Secuencia\tReferencia usada\tLargo (nt)\t# Ns\t%Ns\tGenes comp
 genes_report = "Gen\tMuestra\tLargo\tInicio\tFin\tBases_identicas\tMismatches\tInserciones\tDeleciones\tNs\tMutaciones_sinonimas\tMutaciones_no_sinonimas\n"
 record = bpio.read(args.annotation, "genbank")
 ref_id = record.id
+sample_to_warn = {}
 
 with open(f"{out}/primers.txt", "w") as hw:
-    hw.write("#sample\tprimer\tpos\tvariant\n")
+    hw.write("#sample\tprimer\tpos\tpos_primer\tvariant\n")
 
 for item in pbar:
     fasta_file = sample_file(item)
@@ -182,6 +213,7 @@ for item in pbar:
                 sample_genes[gene]["insertions"] = frequencies['-']
             else:
                 sample_genes[gene]["dna_seq"] = genomes[genome]["seq"][start:end]
+                sample_genes[gene]["gapped_coding_location"] = ref_genes[gene]["gapped_coding_location"]
                 frequencies = collections.Counter(sample_genes[gene]["dna_seq"])
                 sample_genes[gene]["Ns"] = frequencies['n']
                 sample_genes[gene]["deletions"] = frequencies['-']
@@ -195,6 +227,8 @@ for item in pbar:
                 sample_genes[gene]["mut"] = 0
                 sample_genes[gene]["non_syn_mut"] = {}
                 sample_genes[gene]["syn_mut"] = {}
+                fix_msa(ref_genes, gene)
+                fix_msa(sample_genes, gene)
 
     ## Compare genes ##
     for gene in ref_genes:
@@ -212,26 +246,28 @@ for item in pbar:
                 sample_genes[gene]["mut"] += 1
                 (start, end, aa_pos) = get_codon(i, ref_genes, gene)
 
-                ref_aa = str(Seq(str(ref_genes[gene]["dna_seq"][start:end]), generic_dna).translate(gap="-"))
+                ref_aa = str(Seq(str(ref_genes[gene]["dna_seq"][start:end])).translate(gap="-"))
                 while re.search('^-+$', str(ref_genes[gene]["dna_seq"][start:end])):
                     start -= 3
-                    ref_aa = str(Seq(str(ref_genes[gene]["dna_seq"][start:end]), generic_dna).translate(gap="-"))
+                    ref_aa = str(Seq(str(ref_genes[gene]["dna_seq"][start:end])).translate(gap="-"))
                     if not (start, start + 3) in ref_genes[gene]["gaps"]:
                         ref_genes[gene]["gaps"].append((start, start + 3))
                 ref_aa = ref_aa.replace("-", "")
-                try:
-                    # TODO ver con mati que puede estar pasando
-                    # Bio.Data.CodonTable.TranslationError: Codon '-TT' is invalid
-                    sample_aa = Seq(str(sample_genes[gene]["dna_seq"][start:end]), generic_dna).translate(gap="-")
-                except:
-                    sample_aa = "N"
+                if "-" not in str(sample_genes[gene]["dna_seq"][start:end]):
+                    sample_aa = Seq(str(sample_genes[gene]["dna_seq"][start:end])).translate()
+                    if sample_aa == "*":
+                        sample_aa = "STOP"
+                elif str(sample_genes[gene]["dna_seq"][start:end]) == "---" :
+                    sample_aa = "-"
+                else:
+                    sample_aa = "*"
+                    warn = sample_id+"\t"+gene+"\t"+str(start)+"-"+str(end-1)+"\t"+str(sample_genes[gene]["dna_seq"][start:end])
+                    sample_to_warn[warn] = {"bool" : 1}
                 if ref_aa != sample_aa:
                     mut = ref_aa[0] + str(aa_pos) + sample_aa[0]
                     genomes[sample_id]["non_syn_mut"] += 1
                     sample_genes[gene]["non_syn_mut"][aa_pos - len(ref_genes[gene]["gaps"]) + 1] = {"ref": str(ref_aa),
-                                                                                                    "alt": str(
-                                                                                                        sample_aa),
-                                                                                                    "kind": "prot"}
+                                                                                                    "alt": str(sample_aa)}
                 else:
                     sample_genes[gene]["syn_mut"][int(i + 1 - (len(ref_genes[gene]["gaps"]) * 3))] = {
                         "ref": ref_genes[gene]["dna_seq"][i], "alt": sample_genes[gene]["dna_seq"][i]}
@@ -244,12 +280,12 @@ for item in pbar:
     general_report += sample_id + "\t" + ref_id + "\t"
     general_report += str(genomes[sample_id]["length"]) + "\t"
     general_report += str(genomes[sample_id]["Ns"]) + "\t"
-    general_report += str(round(genomes[sample_id]["Ns"] / genomes[sample_id]["length"], 2)) + "\t"
+    general_report += str(round(genomes[sample_id]["Ns"] / genomes[sample_id]["length"], 4)*100) + "\t"
     general_report += str(len(genomes[sample_id]["complete_genes"])) + "\t"
     general_report += str(len(genomes[sample_id]["incomplete_genes"])) + "\t"
     general_report += str(len(genomes[sample_id]["absent_genes"])) + "\t"
     general_report += str(genomes[sample_id]["mut"]) + "\t"
-    general_report += str(round(genomes[sample_id]["mut"] / genomes[sample_id]["length"], 2)) + "\t"
+    general_report += str(round(genomes[sample_id]["mut"] / genomes[sample_id]["length"], 4)*100) + "\t"
     general_report += str(genomes[sample_id]["syn_mut"]) + "\t"
     general_report += str(genomes[sample_id]["non_syn_mut"]) + "\n"
 
@@ -297,23 +333,24 @@ for item in pbar:
 
         cmd = f'blastn -task "blastn-short"  -query {primers} -db {args.reference} -qcov_hsp_perc 100 -outfmt "6 sseqid sstart send qseqid" > /tmp/{sample}primers_raw.bed 2>/dev/null'
         exec(cmd, verbose=verbose)
-        with open(f"/tmp/{sample}primers.bed", "w") as h:
+        with open(f"{out}/samples/{sample}/primers.bed", "w") as h:
             for line in open(f'/tmp/{sample}primers_raw.bed'):
                 vec = line.split("\t")
                 if int(vec[1]) > int(vec[2]):
                     vec[1], vec[2] = vec[2], vec[1]
                 h.write("\t".join(vec))
-        cmd = f'bedtools  intersect -a "{out}/samples/{sample}/{sample}_ann.vcf" -b "/tmp/{sample}primers.bed"  -wb > "/tmp/{sample}primers.intersect" 2>>"{out}/samples/{sample}/log.txt"'
+        cmd = f'bedtools  intersect -a "{out}/samples/{sample}/{sample}_ann.vcf" -b "{out}/samples/{sample}/primers.bed" -wb > "/tmp/{sample}primers.intersect" 2>>"{out}/samples/{sample}/log.txt"'
         exec(cmd, verbose=verbose)
-        with open(f'/tmp/{sample}primers.intersect') as h, \
-            open(f'{out}/samples/{sample}/{sample}_primers.txt',   "w") as hw:
-            hw.write("#sample\tprimer\tpos\tvariant\n")
+        with open(f'/tmp/{sample}primers.intersect') as h, open(f'{out}/samples/{sample}/{sample}_primers.txt',
+                                                                "w") as hw:
+            hw.write("#sample\tprimer\tpos_ref\tpos_primer\tvariant\n")
             for line in h:
                 vec = line.strip().split()
                 # MN996528.1      3037    .       C       T       225     .       DP=26;VDB=0.343005;SGB=-0.690438;MQSB=1;MQ0F=0;AC=1;AN=1;DP4=0,0,5,12;MQ=60     GT:PL   1:255,0 MN996528.1      3028    3047    p2
                 pos, ref, alt, primer, pstart, pend = int(vec[1]), vec[3], vec[4], vec[-1], int(vec[-3]), int(vec[-2])
                 vcf_end = pos + len(ref) - 1
                 start, end = max(pos, pstart), min(vcf_end, pend)
+                pos_primer = start - pstart + 1
                 if len(ref) > len(alt):
                     alt = f'NotFound -> Deletion at {pos} of {len(ref) - len(alt)}bps'
                 elif len(ref) < len(alt):
@@ -325,8 +362,8 @@ for item in pbar:
                         if "N" in alt:
                             alt = "Presence of Ns in the region"
                         else:
-                            alt = f'{ref[max(pos, start) - pos:end - pos]}->{alt[max(pos, pstart) - pstart:end - pstart]}'
-                hw.write("\t".join([sample, primer, str(start), alt]) + "\n")
+                            alt = f'{ref[max(pos, start) - pos:end - pos + 1 ]}->{alt[max(pos, pstart) - pstart:end - pstart + 1 ]}'
+                hw.write("\t".join([sample, primer, str(start), str(pos_primer), alt]) + "\n")
 
         cmd = f'grep -v "^#" "{out}/samples/{sample}/{sample}_primers.txt" >> {out}/primers.txt'
         exec(cmd, verbose=verbose)
@@ -334,3 +371,12 @@ for item in pbar:
 with open(f"{out}/output_general.tsv", 'w') as general_output, open(f"{out}/output_genes.tsv", 'w') as genes_output:
     print(general_report, file=general_output)
     print(genes_report, file=genes_output)
+
+if sample_to_warn:
+    import sys
+    sys.stderr.write ("WARNING: Hubo muestras con inserciones/deleciones menores a un triplete. Para más información ver el archivo log_warnings.txt\n")
+    warnings_report = "Muestra\tGen\tPosicion\tCodon\n"
+    for i in sample_to_warn:
+        warnings_report += str(i) + "\n"
+    with open(f"{out}/log_warnings.txt", 'w') as warning_log:
+        print(warnings_report, file=warning_log)
