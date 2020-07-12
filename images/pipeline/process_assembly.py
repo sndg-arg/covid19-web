@@ -275,12 +275,12 @@ for item in pbar:
     general_report += sample_id + "\t" + ref_id + "\t"
     general_report += str(genomes[sample_id]["length"]) + "\t"
     general_report += str(genomes[sample_id]["Ns"]) + "\t"
-    general_report += str(round(genomes[sample_id]["Ns"] / genomes[sample_id]["length"], 4)*100) + "\t"
+    general_report += str(round(genomes[sample_id]["Ns"] / genomes[sample_id]["length"]*100), 2) + "\t"
     general_report += str(len(genomes[sample_id]["complete_genes"])) + "\t"
     general_report += str(len(genomes[sample_id]["incomplete_genes"])) + "\t"
     general_report += str(len(genomes[sample_id]["absent_genes"])) + "\t"
     general_report += str(genomes[sample_id]["mut"]) + "\t"
-    general_report += str(round(genomes[sample_id]["mut"] / genomes[sample_id]["length"], 4)*100) + "\t"
+    general_report += str(round(genomes[sample_id]["mut"] / genomes[sample_id]["length"]*100), 2) + "\t"
     general_report += str(genomes[sample_id]["syn_mut"]) + "\t"
     general_report += str(genomes[sample_id]["non_syn_mut"]) + "\n"
 
@@ -293,7 +293,7 @@ for item in pbar:
         genes_report += str(sample_genes[gene]["insertions"]) + "\t"
         genes_report += str(sample_genes[gene]["deletions"]) + "\t"
         genes_report += str(sample_genes[gene]["Ns"]) + "\t"
-        genes_report += str(sample_genes[gene]["Ns"]/ref_genes[gene]["length"]*100) + "\t"
+        genes_report += str(round(sample_genes[gene]["Ns"]/ref_genes[gene]["length"]*100), 2) + "\t"
         for m in sample_genes[gene]["syn_mut"]:
             genes_report += str(sample_genes[gene]["syn_mut"][m]["ref"]) + str(m) + str(
                 sample_genes[gene]["syn_mut"][m]["alt"]) + ";"
