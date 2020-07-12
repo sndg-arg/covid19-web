@@ -108,7 +108,7 @@ else:
     sample_fn = lambda item: item.id.replace("/", "_").replace(" ", "_").replace("|", "_")
 
 general_report = "Secuencia\tReferencia usada\tLargo (nt)\t# Ns\t%Ns\tGenes completos\tGenes incompletos\tGenes no encontrados\t# Mut. (nt)\t% Mut.\t# Mut. Sin.\t# Mut. No Sin.\n"
-genes_report = "Gen\tMuestra\tLargo\tInicio\tFin\tBases_identicas\tMismatches\tInserciones\tDeleciones\tNs\tMutaciones_sinonimas\tMutaciones_no_sinonimas\n"
+genes_report = "Gen\tMuestra\tLargo\tInicio\tFin\tBases_identicas\tMismatches\tInserciones\tDeleciones\tNs\t%Ns\tMutaciones_sinonimas\tMutaciones_no_sinonimas\n"
 record = bpio.read(args.annotation, "genbank")
 ref_id = record.id
 sample_to_warn = {}
@@ -293,6 +293,7 @@ for item in pbar:
         genes_report += str(sample_genes[gene]["insertions"]) + "\t"
         genes_report += str(sample_genes[gene]["deletions"]) + "\t"
         genes_report += str(sample_genes[gene]["Ns"]) + "\t"
+        genes_report += str(sample_genes[gene]["Ns"]/ref_genes[gene]["length"]*100) + "\t"
         for m in sample_genes[gene]["syn_mut"]:
             genes_report += str(sample_genes[gene]["syn_mut"][m]["ref"]) + str(m) + str(
                 sample_genes[gene]["syn_mut"][m]["alt"]) + ";"
