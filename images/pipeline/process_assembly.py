@@ -46,13 +46,13 @@ def get_codon(pos, genes_dict, gene):
                 return (pos, pos + 3, pos_aa)
 
 def fix_msa (genes, gene):
-    new_seq  = ''
     i = 0
     for loc in genes[gene]["gapped_coding_location"]:
         while i < (int(loc[1]) - int(loc[0])):
             codon = genes[gene]["dna_seq"][i:i+3]
             if '-' in codon:
                 extra_seq = ''
+                start = i
                 i += 3
                 next_codon = genes[gene]["dna_seq"][i:i+3]
                 while next_codon == '---':
@@ -61,16 +61,11 @@ def fix_msa (genes, gene):
                     next_codon = genes[gene]["dna_seq"][i:i+3]
                 if re.search( '\w\w-', codon) and re.search( '--\w', next_codon):
                     new_codon = codon[0:2] + next_codon[-1]
-                    new_seq = new_seq + new_codon + extra_seq + "---"
+                    genes[gene]["dna_seq"] = genes[gene]["dna_seq"][:start] + new_codon + extra_seq + "---" + genes[gene]["dna_seq"][i+3:]
                 elif re.search( '\w--', codon) and re.search( '-\w\w', next_codon):
                     new_codon = codon[0] + next_codon[1:3]
-                    new_seq = new_seq + "---" + extra_seq + new_codon
-                else:
-                    new_seq = new_seq + codon + extra_seq + next_codon
-            else:
-                new_seq += codon
+                    genes[gene]["dna_seq"] = genes[gene]["dna_seq"][:start] + "---" + extra_seq + new_codon + genes[gene]["dna_seq"][i+3:]
             i += 3
-    genes[gene]["dna_seq"] = new_seq
 
 
 ###main
@@ -113,7 +108,7 @@ else:
     sample_fn = lambda item: item.id.replace("/", "_").replace(" ", "_").replace("|", "_")
 
 general_report = "Secuencia\tReferencia usada\tLargo (nt)\t# Ns\t%Ns\tGenes completos\tGenes incompletos\tGenes no encontrados\t# Mut. (nt)\t% Mut.\t# Mut. Sin.\t# Mut. No Sin.\n"
-genes_report = "Gen\tMuestra\tLargo\tInicio\tFin\tBases_identicas\tMismatches\tInserciones\tDeleciones\tNs\tMutaciones_sinonimas\tMutaciones_no_sinonimas\n"
+genes_report = "Gen\tMuestra\tLargo\tInicio\tFin\tBases_identicas\tMismatches\tInserciones\tDeleciones\tNs\t%Ns\tMutaciones_sinonimas\tMutaciones_no_sinonimas\n"
 record = bpio.read(args.annotation, "genbank")
 ref_id = record.id
 sample_to_warn = {}
@@ -266,7 +261,7 @@ for item in pbar:
                 if ref_aa != sample_aa:
                     mut = ref_aa[0] + str(aa_pos) + sample_aa[0]
                     genomes[sample_id]["non_syn_mut"] += 1
-                    sample_genes[gene]["non_syn_mut"][aa_pos - len(ref_genes[gene]["gaps"]) + 1] = {"ref": str(ref_aa),
+                    sample_genes[gene]["non_syn_mut"][aa_pos - len(ref_genes[gene]["gaps"])] = {"ref": str(ref_aa),
                                                                                                     "alt": str(sample_aa)}
                 else:
                     sample_genes[gene]["syn_mut"][int(i + 1 - (len(ref_genes[gene]["gaps"]) * 3))] = {
@@ -280,12 +275,12 @@ for item in pbar:
     general_report += sample_id + "\t" + ref_id + "\t"
     general_report += str(genomes[sample_id]["length"]) + "\t"
     general_report += str(genomes[sample_id]["Ns"]) + "\t"
-    general_report += str(round(genomes[sample_id]["Ns"] / genomes[sample_id]["length"], 4)*100) + "\t"
+    general_report += str(round(genomes[sample_id]["Ns"] / genomes[sample_id]["length"]*100), 2) + "\t"
     general_report += str(len(genomes[sample_id]["complete_genes"])) + "\t"
     general_report += str(len(genomes[sample_id]["incomplete_genes"])) + "\t"
     general_report += str(len(genomes[sample_id]["absent_genes"])) + "\t"
     general_report += str(genomes[sample_id]["mut"]) + "\t"
-    general_report += str(round(genomes[sample_id]["mut"] / genomes[sample_id]["length"], 4)*100) + "\t"
+    general_report += str(round(genomes[sample_id]["mut"] / genomes[sample_id]["length"]*100), 2) + "\t"
     general_report += str(genomes[sample_id]["syn_mut"]) + "\t"
     general_report += str(genomes[sample_id]["non_syn_mut"]) + "\n"
 
@@ -298,6 +293,7 @@ for item in pbar:
         genes_report += str(sample_genes[gene]["insertions"]) + "\t"
         genes_report += str(sample_genes[gene]["deletions"]) + "\t"
         genes_report += str(sample_genes[gene]["Ns"]) + "\t"
+        genes_report += str(round(sample_genes[gene]["Ns"]/ref_genes[gene]["length"]*100), 2) + "\t"
         for m in sample_genes[gene]["syn_mut"]:
             genes_report += str(sample_genes[gene]["syn_mut"][m]["ref"]) + str(m) + str(
                 sample_genes[gene]["syn_mut"][m]["alt"]) + ";"
