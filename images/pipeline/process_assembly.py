@@ -353,6 +353,7 @@ for item in pbar:
                 pos_primer = start - pstart + 1
                 if len(ref) > len(alt):
                     alt = f'NotFound -> Deletion at {pos} of {len(ref) - len(alt)}bps'
+                    pos_primer = "-"
                 elif len(ref) < len(alt):
                     alt = f'Insertion at {pos} of {len(alt) - len(ref)}bps'
                 else:
