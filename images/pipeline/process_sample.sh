@@ -62,31 +62,26 @@ if [ -f "$OUT1" ]; then
   IN1=$OUT1
   IN2=$OUT2
 fi
-OUT1=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_1_fastp.fastq
-OUT2=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_2_fastp.fastq
-echo fastp -f $TRIML -t $TRIMR -l $MINLEN -e $QPROM  --thread $CPUS -i $IN1 -I $IN2 -o $OUT1 -O $OUT2
-fastp -f $TRIML -t $TRIMR -l $MINLEN -e $QPROM  --thread $CPUS -i "$IN1" -I "$IN2" -o "$OUT1" -O "$OUT2"
-
-rm fastp.html  fastp.json
-
-
-
-
-
 
 #Limpiar adaptadores
 echo "Removing adapters..."
+
+OUT1=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_1_cutadapt.fastq
+OUT2=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_2_cutadapt.fastq
+echo cutadapt -a file:$ADAPTERS -o "$OUT1" -p "$OUT2" "$IN1" "$IN2"
+cutadapt --cores="$CPUS" -a file:${ADAPTERS} -o "$OUT1" -p "$OUT2" "$IN1" "$IN2"
+
 IN1=$OUT1
 IN2=$OUT2
 OUT1=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_1_repaired.fastq
 OUT2=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_2_repaired.fastq
-echo cutadapt -a file:$ADAPTERS -o "$OUT1" -p "$OUT2" "$IN1" "$IN2"
-cutadapt --cores="$CPUS" -a file:${ADAPTERS} -o "$OUT1" -p "$OUT2" "$IN1" "$IN2"
-rm "$IN1" "$IN2"
+echo fastp -f $TRIML -t $TRIMR -l $MINLEN -e $QPROM  --thread $CPUS -i $IN1 -I $IN2 -o $OUT1 -O $OUT2
+fastp -f $TRIML -t $TRIMR -l $MINLEN -e $QPROM  --thread $CPUS -i "$IN1" -I "$IN2" -o "$OUT1" -O "$OUT2"
+
+rm fastp.html  fastp.json "$IN1" "$IN2"
+
 
 fastqc "$OUT1" "$OUT2" -o "${RESULTS}/${SAMPLE_NAME}/" -q
-
-
 
 #Mapeo
 echo "Mapping..."
