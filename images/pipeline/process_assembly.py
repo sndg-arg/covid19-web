@@ -17,7 +17,7 @@ import collections
 import re
 
 
-## Functions
+## Functions ##
 def exec(cmd, verbose=False):
     if verbose:
         print(cmd)
@@ -68,7 +68,7 @@ def fix_msa (genes, gene):
             i += 3
 
 
-###main
+## Main ##
 
 parser = argparse.ArgumentParser(description='')
 parser.add_argument("-i", '--fasta', type=str, help='directorio de fastas no alineados')
@@ -143,7 +143,7 @@ for item in pbar:
                 "coding_regions": len(locations)  # number of coding regions
             }
 
-    ##  Read MSA ##
+    ## Read MSA ##
     msa_dict = bpio.to_dict(bpio.parse(msa, "fasta"))
     assert ref_id in msa_dict, f"ref {ref_id} not found in msa ({','.join(msa_dict)})"
 
@@ -288,7 +288,7 @@ for item in pbar:
             else:
                 sample_genes[gene]["ident"] += 1
 
-    ## Printing outputs ##
+    ## Saving outputs ##
     general_report += sample_id + "\t" + ref_id + "\t"
     general_report += str(genomes[sample_id]["length"]) + "\t"
     general_report += str(genomes[sample_id]["Ns"]) + "\t"
@@ -322,7 +322,7 @@ for item in pbar:
         genes_report = genes_report.rstrip(';')
         genes_report += "\n"
 
-    ## Primers
+    ## Primers ##
     if primers:
         assert os.path.exists(primers), f"no existe el archivo de primers{primers}"
         cmd = f'python3 /app/script/MSAMap.py -r MN996528.1  -i {msa} >> "{out}/samples/{sample}/{sample}_variants.vcf" 2>>"{out}/samples/{sample}/log.txt"'
