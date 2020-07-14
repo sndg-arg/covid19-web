@@ -159,8 +159,12 @@ for item in pbar:
         for match in gap_iter:
             list_gaps.append((match.span()[0], match.span()[1]))
             length = length - match.span()[1] + match.span()[0]
+        unamb_length = length
         n_iter = re.finditer('n+', str(seq_record.seq).lower())
         for match in n_iter:
+            if match.span()[0] == 0 or match.span()[1] >= length:
+                unamb_length = unamb_length - match.span()[1] + match.span()[0]
+                continue 
             Ns += match.span()[1] - match.span()[0]
             if (match.span()[1] - match.span()[0] >= 20):
                 list_ns.append((match.span()[0], match.span()[1]))
@@ -168,7 +172,7 @@ for item in pbar:
         genomes[seq_record.id] = {"Ns": Ns,
                                   "gaps": list_gaps,
                                   "n_islands": list_ns,
-                                  "length": length,
+                                  "length": unamb_length,
                                   "seq": str(seq_record.seq).lower(),
                                   "mut": 0,
                                   "syn_mut": 0,
@@ -241,13 +245,26 @@ for item in pbar:
                 sample_genes[gene]["mut"] += 1
                 (start, end, aa_pos) = get_codon(i, ref_genes, gene)
 
-                ref_aa = str(Seq(str(ref_genes[gene]["dna_seq"][start:end])).translate(gap="-"))
-                while re.search('^-+$', str(ref_genes[gene]["dna_seq"][start:end])):
-                    start -= 3
+                if "-" not in str(ref_genes[gene]["dna_seq"][start:end]):
                     ref_aa = str(Seq(str(ref_genes[gene]["dna_seq"][start:end])).translate(gap="-"))
-                    if not (start, start + 3) in ref_genes[gene]["gaps"]:
-                        ref_genes[gene]["gaps"].append((start, start + 3))
-                ref_aa = ref_aa.replace("-", "")
+                elif str(ref_genes[gene]["dna_seq"][start:end]) == "---":
+                    while re.search('^-+$', str(ref_genes[gene]["dna_seq"][start:end])):
+                        start -= 3
+                        ref_aa = str(Seq(str(ref_genes[gene]["dna_seq"][start:end])).translate(gap="-"))
+                        if not (start, start + 3) in ref_genes[gene]["gaps"]:
+                            ref_genes[gene]["gaps"].append((start, start + 3))
+                    ref_aa = ref_aa.replace("-", "")
+                else:
+                    ref_aa = "*"
+                    ins_codon = ""
+                    for a in range(start, end):
+                        if str(ref_genes[gene]["dna_seq"][a]) != str(sample_genes[gene]["dna_seq"][a]):
+                            ins_codon += str(sample_genes[gene]["dna_seq"][a]).upper()
+                        else:
+                            ins_codon += str(sample_genes[gene]["dna_seq"][a])
+                    warn = sample_id+"\t"+gene+"\t"+str(start)+"-"+str(end-1)+"\t"+ins_codon+"\tinsercion"
+                    sample_to_warn[warn] = {"bool" : 1}
+                    
                 if "-" not in str(sample_genes[gene]["dna_seq"][start:end]):
                     sample_aa = Seq(str(sample_genes[gene]["dna_seq"][start:end])).translate()
                     if sample_aa == "*":
@@ -256,7 +273,7 @@ for item in pbar:
                     sample_aa = "-"
                 else:
                     sample_aa = "*"
-                    warn = sample_id+"\t"+gene+"\t"+str(start)+"-"+str(end-1)+"\t"+str(sample_genes[gene]["dna_seq"][start:end])
+                    warn = sample_id+"\t"+gene+"\t"+str(start)+"-"+str(end-1)+"\t"+str(sample_genes[gene]["dna_seq"][start:end])+"\tdelecion"
                     sample_to_warn[warn] = {"bool" : 1}
                 if ref_aa != sample_aa:
                     mut = ref_aa[0] + str(aa_pos) + sample_aa[0]
@@ -372,7 +389,7 @@ with open(f"{out}/output_general.tsv", 'w') as general_output, open(f"{out}/outp
 if sample_to_warn:
     import sys
     sys.stderr.write ("WARNING: Hubo muestras con inserciones/deleciones menores a un triplete. Para más información ver el archivo log_warnings.txt\n")
-    warnings_report = "Muestra\tGen\tPosicion\tCodon\n"
+    warnings_report = "Muestra\tGen\tPosicion\tCodon\tTipo\n"
     for i in sample_to_warn:
         warnings_report += str(i) + "\n"
     with open(f"{out}/log_warnings.txt", 'w') as warning_log:
