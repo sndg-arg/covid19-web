@@ -11,11 +11,15 @@ from bioseq.models.Biosequence import Biosequence
 from bioseq.models.Dbxref import DBx, Dbxref
 from bioseq.models.Seqfeature import Seqfeature
 from bioseq.models.Variant import Variant
+from bioseq.models.PDBVariant import PDBVariant
 from config.settings.base import STATICFILES_DIRS
-from pdbdb.models import PDB
-from pdbdb.models import Property
+from pdbdb.models import PDB, Property
+
 # from ..templatetags.bioresources_extras import split
 from . import latam_countries
+from collections import defaultdict
+import pandas as pd
+import numpy as np
 
 
 # "GU280_gp11": "orf10_prot.fasta", ??
@@ -63,6 +67,7 @@ def ProteinView(request, pk):
     structures = protein_structures(dbxss)
     pdbxrefs = dbxrefs(dbxss)
     prot_variants = variants(be)
+    # prot_variants_table = variants_table(be)
 
     msa = be.accession + ".faa"
     msa_file = f'{STATICFILES_DIRS[0]}/ORFs/{msa}'
@@ -73,7 +78,8 @@ def ProteinView(request, pk):
 
     return render(request, 'gene_view.html', {"grouped_features": grouped_features,
                                               "functions": functions, "assembly": "assembly", "msa": msa,
-                                              "variants": prot_variants,
+                                              "variants": prot_variants, "latam_countries": latam_countries,
+                                              # "variants_table": prot_variants_table,
                                               "object": be, "feature": feature, "seq": seq, "start": start, "end": end,
                                               "protein_features": pfeatures, "structures": structures,
                                               "dbxrefs": pdbxrefs,
@@ -154,22 +160,69 @@ def protein_features(protein_entry):
     return pfeatures
 
 
-def variants(protein_entry):
-    """
-    https://pivottable.js.org/examples/
-    :param protein_entry:
-    :return:
-    """
+def variants(be):
     data = []
-    vs = Variant.objects.filter(bioentry=protein_entry).values("ref", "sample_variants__alt", "pos",
-                                                               "sample_variants__sample__country",
-                                                               "sample_variants__sample__name")
+    vs = Variant.objects.values("ref", "sample_variants__alt", "pos", "variant_id",
+                                "sample_variants__sample__country", "bioentry_id",
+                                "sample_variants__sample__name").filter(bioentry=be)
+
+    variant_ids = []
     for sample_variant in vs:
         if ((sample_variant["ref"] != "X") and
             (sample_variant["sample_variants__sample__country"] in latam_countries)):
+            # key = "_".join([ str(pdb_var["pos"]), pdb_var["ref"]])
+            variant_ids.append(sample_variant["variant_id"])
             record = {"ref": sample_variant["ref"], "pos": sample_variant["pos"] + 1,
                       "alt": sample_variant["sample_variants__alt"],
+
+                      "bioentry_id": be.bioentry_id,
                       "country": sample_variant["sample_variants__sample__country"],
+                      "count": 1.0,
                       "cod": sample_variant["sample_variants__sample__name"]}
             data.append(record)
-    return data
+    df_raw = pd.DataFrame(data)
+
+    df = df_raw.pivot_table(index=["pos", "ref", "alt"], columns=["country"], values="count",
+                            aggfunc=np.sum).fillna(0).astype(int).sort_values(
+        ["pos", "ref", "alt"])
+
+    fields = {"variant__pos": "pos", "variant__ref": "ref",
+              # "residue__chain": "chain", "residue__resid": "resid",
+              "residue__pdb__code": "pdb",
+              # "residue__residue_sets__pdbresidue_set__name": "residue_set",
+              "residue__residue_sets__pdbresidue_set__residue_set__name": "residue_set_type",
+              # "residue__residue_sets__pdbresidue_set__description": "residue_set_desc"
+              }
+    pdb_vars = [{v: x[k] for k, v in fields.items()} for x in
+                PDBVariant.objects.filter(variant__bioentry=be, variant__in=variant_ids).values(*fields.keys())]
+
+    pdb_vars_dict = defaultdict(list)
+    for pdb_var in pdb_vars:
+        key = "_".join([str(pdb_var["pos"] + 1), pdb_var["ref"]])
+        pdb_vars_dict[key].append(pdb_var)
+    pdb_vars_dict = dict(pdb_vars_dict)
+    pdb_vars_dict2 = defaultdict(list)
+
+    for k, v in pdb_vars_dict.items():
+        pdbs = []
+        sites = []
+        for strd in v:
+            # agg[strd["pdb"]].append(" ".join([str(strd[x]) for x in ['chain','resid',
+            #             'residue_set_type','residue_set','residue_set_desc'] if strd[x] ] ))
+            pdbs.append(strd["pdb"])
+            if strd["residue_set_type"]:
+                # ,'residue_set','residue_set_desc'
+                sites.append(" ".join([str(strd[x]) for x in ['residue_set_type']]))
+        # pdb_vars_dict[k] = [{"pdb": k, "res": v,"sites":list(set(sites))} for k, v in agg.items()]
+        pdb_vars_dict2[k] = {"pdbs": list(set(pdbs)), "sites": list(set(sites))}
+    pdb_vars_dict = dict(pdb_vars_dict2)
+
+    variants = []
+
+    for i, r in df.reset_index().iterrows():
+        key = "_".join([str(r["pos"]), r["ref"]])
+        v = r.to_dict()
+        v["struct"] = pdb_vars_dict.get(key, "")
+        variants.append(v)
+
+    return variants

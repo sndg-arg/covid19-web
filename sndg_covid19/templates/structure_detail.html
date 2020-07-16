@@ -11,243 +11,383 @@
 {% block content %}
 
 <script>
+  const url = new URL(window.location.href);
+  const highlight_layers = (url.searchParams.has("layers")) ? url.searchParams.get("layers").split(",") : [];
+  const representations = {};
+  const visible = {};
+  let toogle_view = null;
+  let enabled_layer = false;
 
-    var representations = {};
-    var visible = {};
-    var toogle_view = null;
+  document.addEventListener("DOMContentLoaded", function () {
 
-
-    document.addEventListener("DOMContentLoaded", function () {
-
-      var stage = new NGL.Stage("viewport",{ backgroundColor: "grey" } );
-      stage.loadFile("{% url 'pdbdb:structure_raw_view' pdbid %}", { ext: "pdb"}). //defaultRepresentation: true
-      then( function( component ){
-
-          $("#spinner").remove()
-          toogle_view = (repr) => {
-              visible[repr] = !visible[repr];
-              representations[repr].setVisibility(visible[repr] );
-
-
-              };
-
-
-          {% for chain in chains %}
-          representations["{{chain.name}}"] = component.addRepresentation( "cartoon", {
-                  aspectRatio: 3.0,
-                  scale: 1.5,
-                   sele: "backbone and :{{chain.name}}" //,color:"blue"
-              } );
-          visible["{{chain.name}}"] = true;
-          {% endfor %}
-
-          {% if "hetero" in layers %}
-          representations["hetero"] =  component.addRepresentation( "ball+stick", {
-                             sele: "hetero AND NOT STP AND NOT water"
-                        } );
-          visible["hetero"] = true;
-          {% endif %}
-
-          {% if "water" in layers %}
-          representations["water"] = component.addRepresentation( "spacefill", {
-                            sele: "water",
-                            scale: 0.5
-                        } );
-          representations["water"].setVisibility(false);
-          visible["water"] = false;
-          {% endif %}
+    const stage = new NGL.Stage("viewport", {backgroundColor: "grey"});
+    stage.loadFile("{% url 'pdbdb:structure_raw_view' pdbid %}", {ext: "pdb"}). //defaultRepresentation: true
+      then(function (component) {
+        window.component = component;
+        $("#spinner").remove()
+        toogle_view = (repr) => {
+          visible[repr] = !visible[repr];
+          representations[repr].setVisibility(visible[repr]);
+        };
 
 
+        {% for chain in chains %}
+        representations["{{chain.name}}"] = component.addRepresentation("cartoon", {
+          aspectRatio: 3.0,
+          scale: 1.5,
+          sele: "backbone and :{{chain.name}}" //,color:"blue"
+        });
+        visible["{{chain.name}}"] = true;
+        {% endfor %}
 
-          {% if "dna" in layers %}
-              representations["dna"] = component.addRepresentation( "cartoon", {
-                  sele: "dna",
-                  scale: 0.5
-              } );
-              representations["dna"].setVisibility(true);
-              visible["dna"] = true;
-          {% endif %}
+        {% if "hetero" in layers %}
+        representations["hetero"] = component.addRepresentation("ball+stick", {
+          sele: "hetero AND NOT STP AND NOT water"
+        });
+        visible["hetero"] = true;
+        {% endif %}
+
+        {% if "water" in layers %}
+        representations["water"] = component.addRepresentation("spacefill", {
+          sele: "water",
+          scale: 0.5
+        });
+        representations["water"].setVisibility(false);
+        visible["water"] = false;
+        {% endif %}
 
 
+        {% if "dna" in layers %}
+        representations["dna"] = component.addRepresentation("cartoon", {
+          sele: "dna",
+          scale: 0.5
+        });
+        representations["dna"].setVisibility(true);
+        visible["dna"] = true;
+        {% endif %}
+
+
+        {% if variants %}
+        representations["variants"] = component.addRepresentation("ball+stick", {
+          sele: '{{variants_sele|safe}}',
+          scale: 0.5,
+          color: "red"
+        });
+        representations["variants"].setVisibility(false);
+        visible["variants"] = false;
+        {% endif %}
 
 
         {% for p in pockets %}
-              representations["{{p.name}}_apol"] =  component.addRepresentation( "surface", {
-                  sele: "STP AND .APOL AND {{p.name}}",
-                  multipleBond: false,
-                  color:"white"
+          representations["{{p.name}}_apol"] = component.addRepresentation("surface", {
+            sele: "STP AND .APOL AND {{p.name}}",
+            multipleBond: false,
+            color: "white"
 
-              } );
+          });
 
-              representations["{{p.name}}_pol"] = component.addRepresentation( "surface", {
-                                sele: "STP AND .POL AND {{p.name}}",
-                                multipleBond: false,
-                                color:"black"
+          representations["{{p.name}}_pol"] = component.addRepresentation("surface", {
+            sele: "STP AND .POL AND {{p.name}}",
+            multipleBond: false,
+            color: "black"
 
-                            } );
+          });
 
-            visible["{{p.name}}_pol"] = false;
-            visible["{{p.name}}_apol"] = false;
-            representations["{{p.name}}_pol"].setVisibility(false);
-            representations["{{p.name}}_apol"].setVisibility(false);
+          enabled_layer = highlight_layers.indexOf("{{p.name}}") != -1;
+          visible["{{p.name}}_pol"] =  enabled_layer;
+          visible["{{p.name}}_apol"] = enabled_layer;
+          representations["{{p.name}}_pol"].setVisibility(enabled_layer);
+          representations["{{p.name}}_apol"].setVisibility(enabled_layer);
 
-             representations["{{p.name}}_atm"] =  component.addRepresentation( "ball+stick", {
-                               sele: 'NOT STP AND NOT water AND @{{p.atoms|join:","}}',
-                                color:"purple"
-                           } );
-             visible["{{p.name}}_atm"] = false;
-             representations["{{p.name}}_atm"].setVisibility(false);
+          representations["{{p.name}}_atm"] = component.addRepresentation("ball+stick", {
+            sele: 'NOT STP AND NOT water AND {{p.residues|join:" or "}}',
+            color: "purple"
+          });
+          visible["{{p.name}}_atm"] = false;
+          representations["{{p.name}}_atm"].setVisibility(false);
 
 
-             representations["{{p.name}}_lbl"] = component.addRepresentation( "label", {
-                                         labelType: "atom",
-                                         sele: 'NOT STP AND @{{p.atoms|join:","}}',
-                                     } );
-             visible["{{p.name}}_lbl"] = false;
-             representations["{{p.name}}_lbl"].setVisibility(false);
+          representations["{{p.name}}_lbl"] = component.addRepresentation("label", {
+            labelType: "atom",
+            sele: 'NOT STP AND {{p.residues|join:" or "}}',
+          });
+          visible["{{p.name}}_lbl"] = false;
+          representations["{{p.name}}_lbl"].setVisibility(false);
 
         {% endfor %}
 
         {% for rs in residuesets %}
-            representations["{{rs.name}}"] =  component.addRepresentation( "ball+stick", {
-                          sele: ':A AND ({{rs.residues|join:" OR "}})'
+        enabled_layer = highlight_layers.indexOf("{{rs.name}}") != -1;
+        representations["{{rs.name}}"] = component.addRepresentation("ball+stick", {
+          sele: '{{rs.sele|safe}}'
 
-
-                      } );
-            visible["{{rs.name}}"] = false;
-            representations["{{rs.name}}"].setVisibility(false);
+        });
+        visible["{{rs.name}}"] = enabled_layer;
+        representations["{{rs.name}}"].setVisibility(enabled_layer);
         {% endfor %}
 
 
+        {% if chains|length > 5 %}
+        $('#chainsTable').DataTable({"searching": false, pageLength: 5, paging: true, "lengthChange": false});
+        {% endif %}
 
-          {% if chains|length > 5 %}
-          $('#chainsTable').DataTable({"searching": false,pageLength:5, paging: true,"lengthChange": false });
-          {% endif %}
-
-          {% if pockets|length > 5 %}
-          $('#pocketsTable').DataTable({"searching": false,pageLength:5, paging: true,"lengthChange": false,
-              "order": [[ 3, "desc" ]] });
-          {% endif %}
+        {%  if pockets|length > 5 %}
+        $('#pocketsTable').DataTable({
+          "searching": false, pageLength: 5, paging: true, "lengthChange": false,
+          "order": [[3, "desc"]]
+        });
+        {%  endif %}
 
 
+        component.autoView();
 
-          component.autoView();
-      } );
-    });
-  </script>
+        if (url.searchParams.get("highlight")) {
+          representations["highlight"] = component.addRepresentation("ball+stick", {
+            sele: url.searchParams.get("highlight"),
+            scale: 0.5
+          });
+          component.autoView(url.searchParams.get("highlight"))
+
+        }
+        highlight_layers.forEach(x=>$("#chk_" + x).prop('checked', true) )
+
+      });
+  });
+</script>
 
 <div class="row">
   <div class="col-md-8">
     <h1>{{ object.accession }}</h1>
     <table class="table  table-responsive">
-      <tr><td><b>Proteina</b></td><td>
-        {{ object.accession }}
-        <a href="{% url 'covid:gene_view' protein.bioentry_id %}">  {{ protein.accession }} </a>
-      </td></tr>
-      <tr><td><b>Descripción</b></td><td>
+      <tr>
+        <td><b>Proteina</b></td>
+        <td>
+          {{ object.accession }}
+          <a href="{% url 'covid:gene_view' protein.bioentry_id %}"> {{ protein.accession }} </a>
+        </td>
+      </tr>
+      <tr>
+        <td><b>Descripción</b></td>
+        <td>
 
-        {{protein.name}} <br />
-        {{protein.description}}
+          {{protein.name}} <br/>
+          {{protein.description}}
 
-      </td></tr>
+        </td>
+      </tr>
       {% if protein.genes %}
-      <tr><td><b>Nombre/Gen</b></td><td>
-        {% for v in protein.genes %}
+      <tr>
+        <td><b>Nombre/Gen</b></td>
+        <td>
+          {% for v in protein.genes %}
 
-        {{ v }} <br />
+          {{ v }} <br/>
 
-        {% endfor %}
-      </td></tr>
+          {% endfor %}
+        </td>
+      </tr>
       {% endif %}
 
-      <tr><td>PDB</td><td> <img src="{% static 'images/external.png' %}" alt="link a PDB" />
-        <a href="https://www.rcsb.org/structure/{{pdbid}}">{{pdbid}}</a></td></tr>
+      <tr>
+        <td>PDB</td>
+        <td><img src="{% static 'images/external.png' %}" alt="link a PDB"/>
+          <a href="https://www.rcsb.org/structure/{{pdbid}}">{{pdbid}}</a></td>
+      </tr>
+      <tr>
+        <td colspan="2"> <a href="{% url 'covid:download_pdb_data' pdbid %}?download=1">Descargar anotación en formato json</a> </td>
+
+      </tr>
     </table>
-  </div></div>
+  </div>
+</div>
 
-  <div class="row">
+<button onclick="window.component.autoView()">Resetear Zoom</button>
+
+<div class="row">
   <div class="col-md-8">
-  <div id="viewport" style="width:100%; height:600px;">
+    <div id="viewport" style="width:100%; height:600px;">
 
-  <img id="spinner" src="{% static 'images/spinner.gif' %}" alt="cargando..." />
+      <img id="spinner" src="{% static 'images/spinner.gif' %}" alt="cargando..."/>
+
+    </div>
 
   </div>
+  <div class="col-md-4">
+    <div id="accordion">
 
+      {% if chains|length > 1%}
+      <div class="card">
+        <div class="card-header" id="headingOne1">
+
+          <h4 class="mb-0">
+            <button class="btn btn-link" data-toggle="collapse" data-target="#collapseOne1" aria-expanded="true" aria-controls="collapseOne1">
+              Chains
+            </button>
+          </h4>
+        </div>
+
+        <div id="collapseOne1" class="collapse show" aria-labelledby="headingOne" data-parent="#accordion">
+          <div class="card-body">
+            <table id="chainsTable" class="table">
+              <thead>
+              <tr>
+                <td>Nombre</td>
+                <td>Visible</td>
+              </tr>
+              </thead>
+              <tbody>
+              {% for chain in chains %}
+              <tr>
+                <td>{{chain.name}}</td>
+                <td><input type="checkbox" checked="checked" onchange="toogle_view('{{chain.name}}')"></td>
+              </tr>
+              {% endfor %}
+              {% endif %}
+
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+      {% if pockets %}
+
+      <div class="card">
+        <div class="card-header" id="headingOne2">
+
+          <h4 class="mb-0">
+            <button class="btn btn-link" data-toggle="collapse" data-target="#collapseOne2" aria-controls="collapseOne2">
+              Pockets
+            </button></h4></div>
+        <div id="collapseOne2" class="collapse" aria-labelledby="headingOne2" data-parent="#accordion">
+          <div class="card-body">
+      <table id="pocketsTable" class="table">
+        <thead>
+        <tr>
+          <td>Nro</td>
+          <td>Atoms</td>
+          <td>Spheres</td>
+          <td>Druggability</td>
+          <td>Labels</td>
+        </tr>
+        </thead>
+        <tbody>
+
+        {% for p in pockets %}
+
+        <tr>
+          <td>{{p.name}}</td>
+          <td><input type="checkbox" onchange="toogle_view('{{p.name}}_atm')"></td>
+          <td><input id="chk_{{p.name}}" type="checkbox" onchange="toogle_view('{{p.name}}_pol');toogle_view('{{p.name}}_apol')"></td>
+          <td>{{p.druggability}}</td>
+          <td><input type="checkbox" onchange="toogle_view('{{p.name}}_lbl')"></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+
+          </div></div></div>
+      {% endif %}
+
+
+      {% if layers %}
+
+      <div class="card">
+        <div class="card-header" id="headingOne3">
+
+          <h4 class="mb-0">
+            <button class="btn btn-link" data-toggle="collapse" data-target="#collapseOne3"  aria-controls="collapseOne3">
+              Features</button></h4></div>
+        <div id="collapseOne3" class="collapse" aria-labelledby="headingOne3" data-parent="#accordion">
+          <div class="card-body">
+            <table class="table">
+
+              {% if variants %}
+              <tr>
+                <td>Variantes</td>
+                <td><input id="chk_variants" type="checkbox" onchange="toogle_view('variants')"></td>
+              </tr>
+              {% endif %}
+
+
+              {% if "hetero" in layers %}
+              <tr>
+                <td>Ligands</td>
+                <td><input type="checkbox" checked="checked" onchange="toogle_view('hetero')"></td>
+              </tr>
+              {% endif %}
+
+              {% if "water" in layers %}
+              <tr>
+                <td>Water</td>
+                <td><input type="checkbox" onchange="toogle_view('water')"></td>
+              </tr>
+              {% endif %}
+
+              {% if "dna" in layers %}
+              <tr>
+                <td>DNA</td>
+                <td><input type="checkbox" checked="checked" onchange="toogle_view('dna')"></td>
+              </tr>
+              {% endif %}
+
+
+              {% for rs in residuesets %}
+              <tr>
+                <td>{{rs.name}} {%  if rs.description %} <br /> {% endif %}  {{ rs.description }}</td>
+                <td><input id="chk_{{rs.name}}" type="checkbox" onchange="toogle_view('{{rs.name}}')"></td>
+              </tr>
+              {% endfor %}
+            </table>
+
+            {% endif %}
+
+
+            </div>
+          </div>
+        </div></div>
+      </div>
+<div class="row">
+  <div class="col-md-12">
+    <h3>Variantes</h3>
+    <table class="table table-striped table-responsive table-condensed">
+      <thead>
+      <tr>
+        <th>Pos Proteina</th>
+        <th>Ref</th>
+        <th>Cadena</th>
+        <th>Residuo</th>
+        <th>-</th>
+      </tr>
+      </thead>
+      <tbody>
+      {% for v in variants %}
+      <tr>
+        <td><a href="{% url 'covid:pos_stats' protein.accession  v.variant.pos|add:1 %}"> {{v.variant.pos|add:1}} </a></td>
+        <td>{{v.variant.ref}}</td>
+        <td>{{v.residue.chain}}</td>
+        <td> {{v.residue.resid}} {{v.residue.resname}}</td>
+        <td>{% for ann in v.ann %} {{ann.desc}} -  {% endfor%}</td>
+        <td>
+          <button
+            onclick="zoom_variant('{{v.residue.chain}}','{{v.residue.resid}}');">
+            Ver
+          </button>
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
-<div class="col-md-4">
-  {% if chains|length > 1%}
-  <h4>Chains</h4>
-  <table id="chainsTable" class="table">
-  <thead><tr><td>Nombre</td><td>Visible</td></tr></thead>
-  <tbody>
-  {% for chain in chains %}
-  <tr>
-  <td>{{chain.name}}</td>
-  <td><input type="checkbox" checked="checked" onchange="toogle_view('{{chain.name}}')"></td>
-  </tr>
-  {% endfor %}
-{% endif %}
-
-</tbody>
-</table>
-
-{% if pockets %}
-<h4>Pockets</h4>
-<table id="pocketsTable" class="table">
-<thead><tr><td>Nro</td><td>Atoms</td><td>Spheres</td><td>Druggability</td><td>Labels</td></tr></thead>
-<tbody>
-
-{% for p in pockets %}
-
-<tr>
-<td>{{p.name}}</td>
-<td><input type="checkbox" onchange="toogle_view('{{p.name}}_atm')"></td>
-<td><input type="checkbox"  onchange="toogle_view('{{p.name}}_pol');toogle_view('{{p.name}}_apol')"></td>
-<td>{{p.druggability}}</td>
-<td><input type="checkbox" onchange="toogle_view('{{p.name}}_lbl')"></td>
-</tr>
-{% endfor %}
-</tbody>
-</table>
-{% endif %}
-
-
-    {% if layers %}
-<h4>Features</h4>
-<table class="table">
-
-{% if "hetero" in layers %}
-<tr>
-<td>Ligands</td>
-<td><input type="checkbox" checked="checked" onchange="toogle_view('hetero')"></td>
-</tr>
-{% endif %}
-
-{% if "water" in layers %}
-<tr>
-<td>Water</td>
-<td><input type="checkbox"  onchange="toogle_view('water')"></td>
-</tr>
-{% endif %}
-
-{% if "dna" in layers %}
-    <tr>
-        <td>DNA</td>
-        <td><input type="checkbox" checked="checked"  onchange="toogle_view('dna')"></td>
-    </tr>
-{% endif %}
-
-{% for rs in residuesets %}
-<tr>
-<td>{{rs.name}}</td>
-<td><input type="checkbox"  onchange="toogle_view('{{rs.name}}')"></td>
-</tr>
-{% endfor %}
-</table>
-
-{% endif  %}
-
-
-</div>
-</div>
+  <script>
+    function zoom_variant(chain,resid) {
+      window.component.autoView(":" + chain + " and " + resid.toString());
+      $(window).scrollTop($('#viewport').offset().top)
+      if  (~visible["variants"]){
+        toogle_view("variants");
+        $("#chk_variants").prop('checked', true)
+      }
+    }
+  </script>
 {% endblock %}

@@ -309,3 +309,5 @@ SNDG_JBROWSE = os.path.join(str(ROOT_DIR), env('SNDG_JBROWSE', default="data/jbr
 STATICFILES_DIRS = STATICFILES_DIRS + [("jbrowse", SNDG_JBROWSE), ]
 
 SECURE_CONTENT_TYPE_NOSNIFF = False
+
+

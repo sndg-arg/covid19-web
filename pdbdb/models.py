@@ -136,6 +136,8 @@ class Atom(models.Model):
 
 
 class ResidueSet(models.Model):
+    BINDING_SITE = "BINDING SITE"
+
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255)  # Pocket / CSA
     description = models.TextField(blank=True, default="")
@@ -153,6 +155,7 @@ class PDBResidueSet(models.Model):
     residue_set = models.ForeignKey(ResidueSet, related_name='residuesets',
                                     db_column="residueset_id", on_delete=models.CASCADE)
     name = models.CharField(max_length=100, default="")
+    description = models.TextField(null=True,default="")
 
     class Meta:
         unique_together = (('pdb', "residue_set", "name"),)
@@ -161,7 +164,7 @@ class PDBResidueSet(models.Model):
         if not hasattr(self, "_properties_dict"):
             self.__properties_dict = {}
             for p in self.properties.all():
-                self.__properties_dict[p.property.name] = p.value
+                self.__properties_dict[p.property.name] = p.prop_value()
         return self.__properties_dict
 
 
@@ -174,6 +177,12 @@ class ResidueSetResidue(models.Model):
 
     class Meta:
         unique_together = (('residue', "pdbresidue_set"),)
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return f'{self.pdbresidue_set.name} -> {self.residue}'
 
 
 class AtomResidueSet(models.Model):
@@ -188,6 +197,7 @@ class AtomResidueSet(models.Model):
 
 class Property(models.Model):
     druggability = 'druggability_score'
+    bound_ligand = "bound_ligand"
 
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255)
@@ -200,7 +210,7 @@ class Property(models.Model):
 class PropertyTag(models.Model):
     id = models.AutoField(primary_key=True)
     property = models.ForeignKey(Property, related_name='tags',
-                                 db_column="residue_id", on_delete=models.DO_NOTHING)
+                                 db_column="property_id", on_delete=models.DO_NOTHING)
     tag = models.CharField(max_length=50)
     description = models.TextField(blank=True, default="")
 
@@ -212,27 +222,35 @@ class PDBProperty(models.Model):
     id = models.AutoField(primary_key=True)
     pdb = models.ForeignKey(PDB, related_name='properties',
                             db_column="pdb_id", on_delete=models.CASCADE)
-    property = models.ForeignKey(PDB, db_column="property_id", on_delete=models.DO_NOTHING)
+    property = models.ForeignKey(Property, db_column="property_id", on_delete=models.DO_NOTHING)
 
     value = models.FloatField(null=True)
+    value_text = models.CharField(max_length=255, null=True)
     tag = models.ForeignKey(PropertyTag, related_name='pdbs',
                             db_column="propertytag_id", null=True, on_delete=models.DO_NOTHING)
 
     class Meta:
         unique_together = (('pdb', "property", "tag"),)
 
+    def prop_value(self):
+        return self.value or self.value_text
+
 
 class ResidueProperty(models.Model):
     id = models.AutoField(primary_key=True)
     residue = models.ForeignKey(Residue, related_name='properties',
                                 db_column="residue_id", on_delete=models.CASCADE)
-    property = models.ForeignKey(PDB, db_column="property_id", on_delete=models.DO_NOTHING)
+    property = models.ForeignKey(Property, db_column="property_id", on_delete=models.DO_NOTHING)
     value = models.FloatField(null=True)
+    value_text = models.CharField(max_length=255, null=True)
     tag = models.ForeignKey(PropertyTag, related_name='residues',
                             db_column="propertytag_id", null=True, on_delete=models.DO_NOTHING)
 
     class Meta:
         unique_together = (('residue', "property", "tag"),)
+
+    def prop_value(self):
+        return self.value or self.value_text
 
 
 class ResidueSetProperty(models.Model):
@@ -242,11 +260,15 @@ class ResidueSetProperty(models.Model):
     property = models.ForeignKey(Property, related_name='residuesets', db_column="property_id",
                                  on_delete=models.DO_NOTHING)
     value = models.FloatField(null=True)
+    value_text = models.CharField(max_length=255, null=True)
     tag = models.ForeignKey(PropertyTag, related_name='residue_sets',
                             db_column="propertytag_id", null=True, on_delete=models.DO_NOTHING)
 
     class Meta:
         unique_together = (('pdbresidue_set', "property", "tag"),)
+
+    def prop_value(self):
+        return self.value or self.value_text
 
 
 class ChainProperty(models.Model):

@@ -15,7 +15,7 @@
 
 <h1>Posición Variante </h1>
 <div class="row">
-  <div class="col-md-3">
+  <div class="col-md-12">
     <table class="table table-bordered">
       <tr>
         <td>Gen</td>
@@ -26,6 +26,21 @@
         <td>Ref</td>
         <td>{{pos}}{{ref}}</td>
       </tr>
+      {% if residues %}
+      <tr>
+        <td colspan="2">Con estructura:<br />
+        {% for pdb,pdb_res in residues %}
+          {{pdb}}:
+          {% for residue in pdb_res %}
+             <a href="{% url 'covid:structure_view' gene_id pdb    %}?highlight=:{{residue.chain}} and {{residue.resid}}{% if residue.layers %}&layers={{residue.layers|join:','}}{% endif %}" >
+               {{residue.pdb.code}}  {{residue.chain}}  {{residue.resid}}{{residue.icode}}
+             </a> {% if residue.ann %} ( {{residue.ann |join:" - "}}) {% endif %}
+          {% endfor %}
+          <br />
+          {% endfor %}
+        </td>
+      </tr>
+      {% endif %}
     </table>
   </div>
 </div>

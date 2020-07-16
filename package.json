@@ -12,7 +12,7 @@
     "css-loader": "^3.5.2",
     "d3": "^5.16.0",
     "feature-viewer": "^0.1.44",
-    "jquery": "^3.3",
+    "jquery": "^3.5.1",
     "msa": "^1.0.3",
     "phylocanvas": "^2.8.1",
     "phylocanvas-plugin-metadata": "^2.2.0",

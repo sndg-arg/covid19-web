@@ -2,9 +2,9 @@ from django.urls import path
 
 from .views.AssemblyView import assembly_view
 from .views.ProteinView import ProteinView
-from .views.StructureView import StructureView
+from .views.StructureView import StructureView,pdb_download
 from .views.ProjectStrainsView import ProjectStrainsView
-from .views.VariantView import VariantView
+from .views.VariantView import VariantView,pdb_variants_download
 
 
 
@@ -22,8 +22,10 @@ urlpatterns = [
     path('', assembly_view, name='genome_view'),
     path('<int:pk>', ProteinView, name='gene_view'),
     path('structure/<int:prot_id>/<str:pdbid>', StructureView.as_view(), name='structure_view'),
+    path('structure/download/<str:pdbid>', pdb_download, name='download_pdb_data'),
 
     path('project/', ProjectStrainsView.as_view(), name='project_strains'),
     path('variant/<str:gene>/<int:pos>', VariantView.as_view(), name='pos_stats'),
+    path('variant/', pdb_variants_download, name='download_pdb_variants'),
     # path('static/jbrowse/data/COVID19/trackList2.json', assembly_view, name='genome_view'),
 ]

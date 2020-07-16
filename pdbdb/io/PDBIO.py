@@ -42,11 +42,9 @@ class PDBIO():
     def create_or_get_biodb(self):
         self.biodb = Biodatabase.objects.get_or_create(name="PDB")[0]
 
-    def pdb_path(self, pdb_code):
-        return os.path.sep.join([self.pdbs_dir, pdb_code[1:3], "pdb" + pdb_code + ".ent"])
 
     def create_sequence(self, pdb_code, pdb_path):
-        pdb = PDB.objects.get(code=pdb_code)
+
 
         struct = PDBParser(PERMISSIVE=1, QUIET=1).get_structure(pdb_code, pdb_path)
         for chain in struct[0].get_chains():
@@ -73,25 +71,29 @@ class PDBIO():
                 end = str(residues[-1].id[1])
                 seqid = "_".join([pdb_code, chain.id, start, end])
                 if not Bioentry.objects.filter(biodatabase=self.biodb, identifier=seqid).exists():
-                    be = Bioentry(biodatabase=self.biodb, accession=seqid, identifier=seqid, name=pdb.code)
+                    be = Bioentry(biodatabase=self.biodb, accession=seqid, identifier=seqid, name=pdb_code)
                     be.save()
                     Biosequence(bioentry=be, seq=seq, length=len(seq)).save()
 
-    def process_pdb(self, pdb_code):
+    def process_pdb(self, pdb_code,pdb_path,pocket_path,force=False):
         assert self.pdb2sql, "PDBIO not initialized"
         pdb_code = pdb_code.lower()
 
         if PDB.objects.filter(code=pdb_code).exists():
-            raise Exception("PDB already exists")
+            if force:
+                PDB.objects.filter(code=pdb_code).delete()
+            else:
+                raise Exception("PDB already exists")
 
-        self.create_sequence(pdb_code)
 
-        pdb_path = self.pdb_path(pdb_code)
+        self.create_sequence(pdb_code,pdb_path)
+
+
         if not os.path.exists(pdb_path):
             pdb_path = self.pdb2sql.download(pdb_code)
 
         self.pdb2sql.create_pdb_entry(pdb_code, pdb_path)
         self.pdb2sql.update_entry_data(pdb_code, pdb_path)
         self.fpocket2sql.load_pdb(pdb_code)
-        self.fpocket2sql.run_fpocket(self.tmp)
+        self.fpocket2sql.run_fpocket(self.tmp,pdb_path=pdb_path,pockets_path=pocket_path)
         self.fpocket2sql.load_pockets()

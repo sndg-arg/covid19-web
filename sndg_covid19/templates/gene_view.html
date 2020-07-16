@@ -249,7 +249,33 @@
 <h3 id="variants">Variantes</h3>
 
 
-<div id="variants_output" style="margin: 30px;"></div>
+<div id="variants_output" style="margin: 30px;">
+<table class="table table-condensed table-responsive">
+  <tr><th>Pos</th><th>Ref</th><th>Alt</th><th>Países</th><th>Info.</th></tr>
+  {% for variant in variants %}
+  <tr>
+    <td> <a href="{% url 'covid:pos_stats' object.accession variant.pos %}"> {{variant.pos}}</a></td> <td>{{variant.ref}}</td> <td>{{variant.alt}}</td>
+    <td> {% for country in latam_countries %}
+      {% if variant|getattribute:country %}
+      {{country}}:{{ variant|getattribute:country }}
+      {% endif %}
+      {%endfor%}
+    </td>
+    <td>
+
+      Mapeado en  {{  variant.struct.pdbs|length }}
+      <a href="{% url 'covid:pos_stats' object.accession variant.pos %}">estructuras</a>.
+
+        {% if  variant.struct.sites %}<br />
+        En regiones de interés tipo:
+        {{variant.struct.sites|join:' - '}}
+        {% endif %}
+      </a>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+</div>
 
 {% endif %}
 
@@ -507,12 +533,7 @@
 <script>
   {% if variants %}
 
-    $("#variants_output").pivot(variants_data,
-      {
-        rows: ["pos","ref","alt"],
-        cols: ["country"]
-      });
-    $("#table_variants").hide()
+
 
   let gene = "";
   $("#variants_output").find("tr").each((idx, tr) => {

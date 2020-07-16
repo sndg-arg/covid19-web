@@ -13,6 +13,8 @@ from .models.Dbxref import Dbxref
 from .models.Seqfeature import SeqfeatureDbxref
 from .models.Taxon import Taxon,TaxonName
 from .models.Location import Location
+from .models.PDBVariant import PDBVariant
+
 
 admin.site.register(Biosequence)
 admin.site.register(Biodatabase)

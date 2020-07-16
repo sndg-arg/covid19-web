@@ -3,7 +3,8 @@ import msa from 'msa';
 import Phylocanvas from 'phylocanvas';
 import Sequence from 'sequence-viewer';
 import $ from 'jquery';
-import 'bootstrap/dist/css/bootstrap.min.css';
+import 'bootstrap/dist/css/bootstrap.css';
+import 'bootstrap/dist/js/bootstrap.bundle'
 import FeatureViewer from 'feature-viewer';
 import * as NGL from 'ngl';
 

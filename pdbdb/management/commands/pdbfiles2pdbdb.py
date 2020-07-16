@@ -5,8 +5,9 @@ from tqdm import tqdm
 
 from pdbdb.io.PDB2SQL import PDB2SQL
 from pdbdb.models import PDB
-from SNDG.Structure.PDBs import  PDBs
-
+from SNDG.Structure.PDBs import PDBs
+from datetime import datetime
+from SNDG.WebServices.PDBsWS import PDBsWS
 
 def iterpdbs(pdbs_dir, pdb_extention=".ent"):
     for index_dir in os.listdir(pdbs_dir):
@@ -27,18 +28,18 @@ class Command(BaseCommand):
         parser.add_argument('--entries_url', default=pdbs.url_pdb_entries)
 
     def handle(self, *args, **options):
-        pdbs = PDBs(pdb_dir=options['pdbs_dir'])
-        pdbs.url_pdb_entries = options["entries_url"]
-        if not os.path.exists(options["entries_path"]):
-            pdbs.download_pdb_entries()
+        pdbs_utils = PDBs(pdb_dir=options['pdbs_dir'])
+        pdbs_utils.url_pdb_entries = options["entries_url"]
 
+        if (datetime.now() - datetime.fromtimestamp(os.path.getctime(options["entries_path"])) ).days > 7:
+            pdbs_utils.download_pdb_entries()
 
         pdb2sql = PDB2SQL(options['pdbs_dir'], options['entries_path'])
         pdb2sql.load_entries()
         if options["only_annotated"]:
             self.stderr.write("only_annotated option activated by default")
             from bioseq.models.Dbxref import Dbxref
-            pdbs = [(x.accession.lower(),pdbs.pdb_path( x.accession.lower()))
+            pdbs = [(x.accession.lower(), pdbs_utils.pdb_path(x.accession.lower()))
                     for x in Dbxref.objects.filter(dbname="PDB")]
         else:
             pdbs = list(tqdm(iterpdbs(options['pdbs_dir'])))
@@ -46,10 +47,17 @@ class Command(BaseCommand):
         # ("4zu4", "/data/databases/pdb/divided/zu/pdb4zu4.ent")
 
         with tqdm(pdbs) as pbar:
-            for code,pdb_path in pbar:
+            for code, pdb_path in pbar:
                 code = code.lower()
+
+                if PDBsWS.is_obsolete(code):
+                    self.stderr.write(f"{code} entry is obsolete")
+                    continue
+
                 try:
-                    pdb_path = pdb2sql.download(code)
+                    pdb_path = pdbs_utils.update_pdb(code)
+                except KeyboardInterrupt:
+                    raise
                 except:
                     self.stderr.write("PDB %s could not be downloaded" % code)
                     continue
@@ -62,5 +70,7 @@ class Command(BaseCommand):
                 try:
                     pdb2sql.create_pdb_entry(code, pdb_path)
                     pdb2sql.update_entry_data(code, pdb_path)
+                except KeyboardInterrupt:
+                    raise
                 except Exception as ex:
                     raise CommandError(ex)

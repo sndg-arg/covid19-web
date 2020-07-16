@@ -113,5 +113,5 @@ class Command(BaseCommand):
         if precompute_graphics:
             self.stderr.write(f"pre computing graphics from variant positions")
             for variant_pos in tqdm(sorted(list(variant_positions))):
-                fig_path = f'{STATICFILES_DIRS[0]}/auto/posfigs/{gene}{pos}.png'
+                fig_path = f'{STATICFILES_DIRS[0]}/auto/posfigs/{gene}{variant_pos}.png'
                 variant_graphics(gene, variant_pos, fig_path, msa_file, msa)

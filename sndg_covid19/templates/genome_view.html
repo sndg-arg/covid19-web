@@ -12,6 +12,10 @@
 {% endblock %}
 
 {% block content %}
+
+
+
+
 <div class="row">
   <div class="col-md-12">
 
@@ -53,8 +57,14 @@
 <!--                   height="400px" width="100%"></iframe>-->
 
 <div class="row">
+  <div class="col-md-12">
   <h3>{% trans 'Genes' %}</h3>
+  </div>
+  <div class="col-md-12">
+<div> Presione sobre el gen para visualizar la anotación y estructuras disponibles de la proteína.  </div>
 
+    </div>
+  <br />
   <table id="genes_table" class="table table-responsive">
     <thead>
     <tr>
@@ -97,23 +107,26 @@
 </div>
 
 <h3 id="variants">Variantes proteicas en LATAM</h3>
+<p>Clickee sobre la posición para visualizar las estadísticas por País</p>
+<p>Puede <a href="{% url 'covid:download_pdb_variants' %}?download=1" >  descargar el listado de las variantes mapeadas a PDB al 01-07-2020 </a> en formato JSON</p>
+<div id="variants_output" style="margin: 30px;">
 
+{{ variants|safe }}
 
-<div id="variants_output" style="margin: 30px;"></div>
-
+</div>
 
 </div>
 
 {% endblock %}
 
 {% block javascript %}
-{{ variants|json_script:"variants_data" }}
+<!--{{ variants|json_script:"variants_data" }}-->
 
 <script>
 
-  const variants_data = JSON.parse($("#variants_data").text());
-  $("#variants_output").pivot(variants_data,
-    {
+  // const variants_data = JSON.parse($("#variants_data").text());
+  // $("#variants_output").pivot(variants_data,
+  //   {
       // rendererOptions: {
       //   table: {
       //     clickCallback: function(e, value, filters, pivotData){
@@ -128,10 +141,10 @@
       //     }
       //   }
       // },
-      rendererName: "Heatmap",
-      rows: ["name", "pos", "ref", "alt"],
-      cols: ["country"]
-    });
+    //   rendererName: "Heatmap",
+    //   rows: ["name", "pos", "ref", "alt"],
+    //   cols: ["country"]
+    // });
   let gene = "";
   $("#variants_output").find("tr").each((idx, tr) => {
     if (idx > 1) {
@@ -141,7 +154,7 @@
       }
 
       const pos = tdEle.html();
-      if (tdEle.hasClass("pvtRowLabel") && (Number.isInteger(parseInt(pos)))) {
+      if  (Number.isInteger(parseInt(pos))) {
         tdEle.html("");
         const url = "{% url 'covid:pos_stats' 'xxx' 0 %}".replace("/0", "/" + pos.toString()).replace("xxx", gene)
         $("<a />", {href: url}).html(pos).appendTo(tdEle);

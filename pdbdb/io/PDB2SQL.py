@@ -18,8 +18,9 @@ warnings.simplefilter('ignore', BiopythonDeprecationWarning)
 warnings.simplefilter('ignore', BiopythonExperimentalWarning)
 
 import subprocess as sp
+import logging
 
-
+_log = logging.getLogger(__name__)
 
 class PDB2SQL():
     def __init__(self, base_dir="/data/databases/pdb/divided/", entries_path="/data/databases/pdb/entries.idx"):
@@ -55,7 +56,7 @@ class PDB2SQL():
                             % (pdb_path, code[1:3], code), shell=True)
             sp.check_output("gunzip %s.gz" % pdb_path, shell=True)
         else:
-            print("%s already exists" % pdb_path)
+            _log.debug("%s already exists" % pdb_path)
         return pdb_path
 
     def create_pdb_entry(self, code, pdb_path):

@@ -1,19 +1,76 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
-from django.utils.translation import gettext_lazy as __
-# from django.shortcuts import redirect, reverse
+
+from django.db.models import Count
+from django.shortcuts import redirect, reverse
 from django.shortcuts import render
 
 from bioseq.models.Biodatabase import Biodatabase
-from bioseq.models.Biosequence import Biosequence
 from bioseq.models.Bioentry import Bioentry, BioentryDbxref
+from bioseq.models.Biosequence import Biosequence
+from bioseq.models.Variant import SampleVariant, Variant
+from . import latam_countries
+import pandas as pd
+import numpy as np
+import json
+from collections import defaultdict
+
+
 # from bioseq.models.Dbxref import Dbxref
 
-from bioseq.models.Variant import Variant, SampleVariant
 
-from django.views.decorators.clickjacking import xframe_options_exempt
+def variants_table():
+    data = []
+    vs = Variant.objects.values("ref", "sample_variants__alt", "pos", "bioentry__accession",
+                                "sample_variants__sample__country", "bioentry_id",
+                                "sample_variants__sample__name")
+    pdb_vars = Variant.objects.values("ref", "pos", "bioentry__accession",
+                                      "pdb_variants__residue__resid",
+                                      "pdb_variants__residue__chain",
+                                      "pdb_variants__residue__pdb__code",
+                                      "pdb_variants__residue__icode",
+                                      )
+    pdb_vars_dict = defaultdict(list)
+    for pdb_var in pdb_vars:
+        key = "_".join([pdb_var["bioentry__accession"], str(pdb_var["pos"] + 1), pdb_var["ref"]])
+        if pdb_var["pdb_variants__residue__pdb__code"]:
+            v = "_".join([pdb_var["pdb_variants__residue__pdb__code"], str(pdb_var["pdb_variants__residue__chain"]),
+                          str(pdb_var["pdb_variants__residue__resid"])])
+            if pdb_var["pdb_variants__residue__icode"].strip():
+                key = key + pdb_var["pdb_variants__residue__icode"]
+            pdb_vars_dict[key].append(v)
+    pdb_vars_dict = dict(pdb_vars_dict)
+    for sample_variant in vs:
+        if ((sample_variant["ref"] != "X") and
+            (sample_variant["sample_variants__sample__country"] in latam_countries)):
+            key = "_".join([pdb_var["bioentry__accession"], str(pdb_var["pos"]), pdb_var["ref"]])
+            record = {"ref": sample_variant["ref"], "pos": sample_variant["pos"] + 1,
+                      "alt": sample_variant["sample_variants__alt"],
+                      "name": sample_variant["bioentry__accession"],
+                      "bioentry_id": sample_variant["bioentry__accession"],
+                      "country": sample_variant["sample_variants__sample__country"],
+                      "count": 1.0,
+                      "cod": sample_variant["sample_variants__sample__name"]}
+            data.append(record)
+    df_raw = pd.DataFrame(data)
 
-from . import latam_countries
+    df = df_raw.pivot_table(index=["name", "pos", "ref", "alt"], columns=["country"], values="count",
+                            aggfunc=np.sum, margins=True, margins_name='Total').fillna(0).astype(int).sort_values(
+        ["name", "pos", "ref", "alt"])
+    keys = ["_".join([str(x) for x in r.name[:3]]) for _, r in df.iterrows()]
+    # con_struct = [(" ".join(pdb_vars_dict[k]) if k in pdb_vars_dict else "") for k in keys]
+    con_struct = [("X" if k in pdb_vars_dict else "") for k in keys]
+
+    # df_raw["pos"] = [f'<a href="{reverse("covid:pos_stats", kwargs={"gene": r["name"], "pos": r.pos})}">{r.pos}</a>'
+    #                  for _, r in df_raw.iterrows()]
+
+
+    df["En PDB"] = con_struct
+    df.columns.name = "País"
+    df.index.names = ["Gen", "Pos", "Ref", "Alt"]
+    html = df.to_html(table_id="variants_table",
+                      classes="table table-responsive", escape=False)
+    return html
 
 
 def assembly_view(request):
@@ -46,7 +103,6 @@ def assembly_view(request):
                                                                       dbxref__dbname="PDB"):
         dbxss[x.bioentry_id].append(x.dbxref.accession)
 
-    from django.db.models import Avg, Count
     variants = {v["variant__bioentry_id"]: v["count"] for v in
                 SampleVariant.objects.exclude(alt="X").values("variant__bioentry_id").annotate(
                     count=Count('variant__pos', distinct=True))}
@@ -64,23 +120,7 @@ def assembly_view(request):
         if "BioentryId" in f.qualifiers_dict() and int(f.qualifiers_dict()["BioentryId"]) in properties:
             f.extra_gene_props = properties[int(f.qualifiers_dict()["BioentryId"])]
 
-    sample_vars = list(
-        SampleVariant.objects.exclude(alt="X").values("variant__bioentry__accession", "sample__country", "variant__ref",
-                                                      "variant__pos",
-                                                      "alt").annotate(count=Count('variant_id', distinct=True)))
-
-    for x in sample_vars:
-        x["country"] = x["sample__country"]
-        del x["sample__country"]
-        x["name"] = x["variant__bioentry__accession"]
-        del x["variant__bioentry__accession"]
-        x["ref"] = x["variant__ref"]
-        del x["variant__ref"]
-        x["pos"] = x["variant__pos"] + 1
-        del x["variant__pos"]
-    sample_vars2 = [x for x in sample_vars if x["country"] in latam_countries]
-
     params = {"query": "",
-              "lengths": lengths, "variants": sample_vars2,
+              "lengths": lengths, "variants": variants_table(),
               "genes": features, "sidebarleft": {}}
     return render(request, 'genome_view.html', params)

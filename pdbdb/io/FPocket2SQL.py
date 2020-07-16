@@ -3,6 +3,9 @@ import os
 import sys
 import warnings
 
+import  logging
+
+
 from Bio import BiopythonWarning, BiopythonParserWarning, BiopythonDeprecationWarning, BiopythonExperimentalWarning
 from django.db import transaction
 from django.db.models import Max
@@ -18,8 +21,9 @@ warnings.simplefilter('ignore', BiopythonExperimentalWarning)
 
 from tqdm import tqdm
 
-
 from SNDG.Structure.FPocket import FPocket, fpocket_properties_map
+
+_log = logging.getLogger(__name__)
 
 pocket_prop_map = {v: k for k, v in fpocket_properties_map.items()}
 
@@ -37,36 +41,33 @@ class FPocket2SQL:
         self.res_pockets = None
         self.pdb = None
 
-
     def create_or_get_pocket_properties(self):
         self.pocket_props = {name: Property.objects.get_or_create(name=name, description=desc)[0]
                              for name, desc in fpocket_properties_map.items()}
 
         self.rsfpocker = ResidueSet.objects.get_or_create(name="FPocketPocket", description="")[0]
 
-    def load_pdb(self,code):
+    def load_pdb(self, code):
         self.pdb = PDB.objects.prefetch_related("residues__atoms").get(code=code)
         Residue.objects.filter(pdb=self.pdb, resname="STP").delete()
-        PDBResidueSet.objects.filter(pdb=self.pdb,residue_set__name="FPocketPocket").delete()
+        PDBResidueSet.objects.filter(pdb=self.pdb, residue_set__name="FPocketPocket").delete()
 
-
-    def run_fpocket(self,tmp="/tmp/pockets/",pdb_path=None):
+    def run_fpocket(self, tmp="/tmp/pockets/", pdb_path=None, pockets_path=None,force=False):
         if not os.path.exists(tmp):
             os.makedirs(tmp)
         if not pdb_path:
             pdb_path = tmp + self.pdb.code + ".pdb"
 
-        pockets_path = os.path.abspath(tmp) + "/" + self.pdb.code + ".pockets.json"
-        if not os.path.exists(pockets_path):
-            if not os.path.exists(pdb_path):
-                with open(pdb_path, "w") as h:
-                    h.write(self.pdb.text)
+        pockets_path = pockets_path if pockets_path else (os.path.abspath(tmp) + "/" + self.pdb.code + ".pockets.json")
+        if force or not os.path.exists(pockets_path):
             res = FPocket(pdb_path, tmp).hunt_pockets()
-            res.save(pockets_path )
+            res.save(pockets_path)
+        else:
+            _log.debug(f'{pockets_path} already exists')
         with open(pockets_path) as h:
             self.res_pockets = json.load(h)
 
-    def _process_pocket_alphas(self,pocket,nro_atm):
+    def _process_pocket_alphas(self, pocket, nro_atm):
         res_alpha = {}
         for stp_line in pocket.as_lines:
             nro_atm += 1
@@ -95,8 +96,7 @@ class FPocket2SQL:
                 rs = PDBResidueSet(name="%i" % pocket.number, pdb=self.pdb, residue_set=self.rsfpocker)
                 rss.append(rs)
                 rs.save()
-                nro_atm = self._process_pocket_alphas(pocket,nro_atm)
-
+                nro_atm = self._process_pocket_alphas(pocket, nro_atm)
 
                 atoms = Atom.objects.select_related("residue").filter(residue__pdb=self.pdb,
                                                                       serial__in=[int(x) for x in pocket.atoms])
