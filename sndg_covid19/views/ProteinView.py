@@ -66,7 +66,10 @@ def ProteinView(request, pk):
     pfeatures = protein_features(be)
     structures = protein_structures(dbxss)
     pdbxrefs = dbxrefs(dbxss)
-    prot_variants = variants(be)
+    try:
+        prot_variants = variants(be)
+    except:
+        prot_variants = []
     # prot_variants_table = variants_table(be)
 
     msa = be.accession + ".faa"
