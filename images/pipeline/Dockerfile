@@ -61,9 +61,13 @@ RUN wget -O /app/gatk.zip "https://github.com/broadinstitute/gatk/releases/downl
 RUN wget -O /app/stacks.tar.gz "https://catchenlab.life.illinois.edu/stacks/source/stacks-2.53.tar.gz" && \
     cd /app && tar xfv /app/stacks.tar.gz && rm /app/stacks.tar.gz && cd stacks-2.53 && ./configure && make && make install
 
-COPY adapters.fasta /ref/
-COPY orfs.fna /ref/
-COPY covid4snpeff.gb /app/snpEff/data/covid19/genes.gbk
+RUN wget -O /app/FastUniq-1.1.tar.gz https://ufpr.dl.sourceforge.net/project/fastuniq/FastUniq-1.1.tar.gz && \
+    cd /app && tar xfv FastUniq-1.1.tar.gz && cd FastUniq/source && make && cp fastuniq /usr/local/bin \
+    && rm -r /app/FastUniq-1.1.tar.gz /app/FastUniq
+
+COPY resources/adapters.fasta /ref/
+COPY resources/orfs.fna /ref/
+COPY resources/covid4snpeff.gb /app/snpEff/data/covid19/genes.gbk
 
 RUN echo "covid19.genome : covid19" >> /app/snpEff/snpEff.config
 RUN echo "  covid19.chromosomes : MN996528" >> /app/snpEff/snpEff.config
@@ -72,13 +76,18 @@ RUN cd /app/snpEff && java -jar snpEff.jar build -genbank -v covid19
 ENV PATH $PATH:/app/MEGAHIT-1.2.9-Linux-x86_64-static/bin/:/app/bbmap/:/app/script/
 
 
-COPY process_sample.sh /app/script/
-COPY process_batch.py /app/script/
-COPY MSAMap.py /app/script/
+COPY resources/process_sample.sh /app/script/
+COPY resources/process_batch.py /app/script/
+COPY resources/MSAMap.py /app/script/
+COPY resources/list_denovo_diffs.py /app/script/
+COPY resources/test_consensus.py /app/script/
+
 COPY process_assembly.py /app/script/
 
 
-RUN chmod +x  /app/script/process_sample.sh  /app/script/process_batch.py /app/script/process_assembly.py /app/script/MSAMap.py
+
+RUN chmod +x  /app/script/process_sample.sh  /app/script/process_batch.py /app/script/process_assembly.py \
+    /app/script/MSAMap.py /app/script/list_denovo_diffs.py /app/script/test_consensus.py
 
 RUN groupadd covid && useradd -r -u 1000 -g covid covid
 USER covid
