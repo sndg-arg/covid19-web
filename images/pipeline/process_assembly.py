@@ -303,7 +303,7 @@ for item in pbar:
 
     for gene in ref_genes:
         genes_report += gene + "\t" + sample_id + "\t" + str(ref_genes[gene]["length"]) + "\t"
-        genes_report += ref_genes[gene]["coding_location"][0][0] + "\t" + ref_genes[gene]["coding_location"][-1][
+        genes_report += str(int(ref_genes[gene]["coding_location"][0][0])+1) + "\t" + ref_genes[gene]["coding_location"][-1][
             1] + "\t"
         genes_report += str(sample_genes[gene]["ident"]) + "\t"
         genes_report += str(sample_genes[gene]["mut"]) + "\t"
@@ -388,7 +388,7 @@ with open(f"{out}/output_general.tsv", 'w') as general_output, open(f"{out}/outp
 
 if sample_to_warn:
     import sys
-    sys.stderr.write ("WARNING: Hubo muestras con inserciones/deleciones menores a un triplete. Para más información ver el archivo log_warnings.txt\n")
+    sys.stderr.write ("WARNING: Hubo muestras con inserciones/deleciones menores a un triplete. Para mas informacion ver el archivo log_warnings.txt\n")
     warnings_report = "Muestra\tGen\tPosicion\tCodon\tTipo\n"
     for i in sample_to_warn:
         warnings_report += str(i) + "\n"
