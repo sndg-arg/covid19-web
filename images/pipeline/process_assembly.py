@@ -152,6 +152,7 @@ for item in pbar:
         list_ns = []
         length = len(str(seq_record.seq))
         Ns = 0
+        Ns_start = 0
         if seq_record.id != ref_id:
             sample_id = seq_record.id
 
@@ -162,9 +163,13 @@ for item in pbar:
         unamb_length = length
         n_iter = re.finditer('n+', str(seq_record.seq).lower())
         for match in n_iter:
-            if match.span()[0] == 0 or match.span()[1] >= length:
+            if match.span()[0] == 0:
+                Ns_start = match.span()[1] - match.span()[0]
                 unamb_length = unamb_length - match.span()[1] + match.span()[0]
-                continue 
+                continue
+            elif match.span()[1] >= length:
+                unamb_length = unamb_length - match.span()[1] + match.span()[0]
+                continue
             Ns += match.span()[1] - match.span()[0]
             if (match.span()[1] - match.span()[0] >= 20):
                 list_ns.append((match.span()[0], match.span()[1]))
@@ -177,6 +182,7 @@ for item in pbar:
                                   "mut": 0,
                                   "syn_mut": 0,
                                   "non_syn_mut": 0,
+                                  "n_start": Ns_start,
                                   "complete_genes": [],
                                   "incomplete_genes": [],
                                   "absent_genes": []
@@ -212,6 +218,7 @@ for item in pbar:
                 sample_genes[gene]["insertions"] = frequencies['-']
             else:
                 sample_genes[gene]["dna_seq"] = genomes[genome]["seq"][start:end]
+                sample_genes[gene]["coding_location"] = ref_genes[gene]["coding_location"]
                 sample_genes[gene]["gapped_coding_location"] = ref_genes[gene]["gapped_coding_location"]
                 frequencies = collections.Counter(sample_genes[gene]["dna_seq"])
                 sample_genes[gene]["Ns"] = frequencies['n']
@@ -303,8 +310,8 @@ for item in pbar:
 
     for gene in ref_genes:
         genes_report += gene + "\t" + sample_id + "\t" + str(ref_genes[gene]["length"]) + "\t"
-        genes_report += str(int(ref_genes[gene]["coding_location"][0][0])+1) + "\t" + ref_genes[gene]["coding_location"][-1][
-            1] + "\t"
+        genes_report += str(int(sample_genes[gene]["coding_location"][0][0])-genomes[sample_id]["n_start"]+1) + "\t"
+        genes_report += str(int(sample_genes[gene]["coding_location"][-1][1])-genomes[sample_id]["n_start"]) + "\t"
         genes_report += str(sample_genes[gene]["ident"]) + "\t"
         genes_report += str(sample_genes[gene]["mut"]) + "\t"
         genes_report += str(sample_genes[gene]["insertions"]) + "\t"
