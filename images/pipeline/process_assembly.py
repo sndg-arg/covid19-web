@@ -110,7 +110,7 @@ else:
 general_report = "Secuencia\tReferencia usada\tLargo (nt)\t# Ns\t%Ns\tGenes completos\tGenes incompletos\tGenes no encontrados\t# Mut. (nt)\t% Mut.\t# Mut. Sin.\t# Mut. No Sin.\n"
 genes_report = "Gen\tMuestra\tLargo\tInicio\tFin\tBases_identicas\tMismatches\tInserciones\tDeleciones\tNs\t%Ns\tMutaciones_sinonimas\tMutaciones_no_sinonimas\n"
 record = bpio.read(args.annotation, "genbank")
-ref_id = record.id
+ref_id = bpio.read(args.reference, "fasta").id
 sample_to_warn = {}
 
 with open(f"{out}/primers.txt", "w") as hw:
@@ -271,7 +271,7 @@ for item in pbar:
                             ins_codon += str(sample_genes[gene]["dna_seq"][a])
                     warn = sample_id+"\t"+gene+"\t"+str(start)+"-"+str(end-1)+"\t"+ins_codon+"\tinsercion"
                     sample_to_warn[warn] = {"bool" : 1}
-                    
+
                 if "-" not in str(sample_genes[gene]["dna_seq"][start:end]):
                     sample_aa = Seq(str(sample_genes[gene]["dna_seq"][start:end])).translate()
                     if sample_aa == "*":
@@ -296,7 +296,7 @@ for item in pbar:
                 sample_genes[gene]["ident"] += 1
 
     ## Saving outputs ##
-    general_report += sample_id + "\t" + ref_id + "\t"
+    general_report += sample_id + "\t" + record.id + "\t"
     general_report += str(genomes[sample_id]["length"]) + "\t"
     general_report += str(genomes[sample_id]["Ns"]) + "\t"
     general_report += str(round(genomes[sample_id]["Ns"] / int(genomes[sample_id]["length"])*100, 2)) + "\t"
@@ -332,7 +332,7 @@ for item in pbar:
     ## Primers ##
     if primers:
         assert os.path.exists(primers), f"no existe el archivo de primers{primers}"
-        cmd = f'python3 /app/script/MSAMap.py -r MN996528.1  -i {msa} >> "{out}/samples/{sample}/{sample}_variants.vcf" 2>>"{out}/samples/{sample}/log.txt"'
+        cmd = f'python3 /app/script/MSAMap.py -r SARS-CoV-2_WIV04_2019  -i {msa} >> "{out}/samples/{sample}/{sample}_variants.vcf" 2>>"{out}/samples/{sample}/log.txt"'
         exec(cmd, verbose=verbose)
 
         cmd = f'java -jar /app/snpEff/snpEff.jar -stats {out}/samples/{sample}/snpEff.html covid19  "{out}/samples/{sample}/{sample}_variants.vcf" > "{out}/samples/{sample}/{sample}_ann.vcf" 2>>"{out}/samples/{sample}/log.txt"'

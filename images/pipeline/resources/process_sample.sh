@@ -1,4 +1,5 @@
 #!/bin/bash
+
 SAMPLE_R1=$1
 SAMPLE_R2=$2
 SAMPLE_NAME=$3
@@ -11,6 +12,7 @@ TRIMR="${TRIMR:-5}"
 TRIML="${TRIML:-20}"
 MINLEN="${MINLEN:-40}"
 QPROM="${QPROM:-30}"
+DEDUP="${DEDUP:-false}"
 
 #*************************************************
 
@@ -34,13 +36,7 @@ echo "QPROM: $QPROM"
 echo "CPUS: $CPUS"
 
 ### Clean #####################################33
-if [ ! -f "${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_1_repaired.fastq" ]; then
-
-##remover duplicados con bbmap
-echo "Removing duplicates..."
-
-OUT1=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_1_dedupped.fastq
-OUT2=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_2_dedupped.fastq
+if [ ! -f "${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_1_filtered.fastq" ]; then
 
 if [[ "${SAMPLE_R1}" == *.gz ]]
 then
@@ -50,26 +46,29 @@ else
   cp $SAMPLE_R1 /tmp/R1.fastq
   cp $SAMPLE_R2 /tmp/R2.fastq
 fi
+
+if $DEDUP
+then
+##remover duplicados
+echo "Removing duplicates..."
+OUT1=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_1_dedupped.fastq
+OUT2=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_2_dedupped.fastq
 IN1=/tmp/R1.fastq
 IN2=/tmp/R2.fastq
 echo "$IN1" > /tmp/fastuniq.txt
 echo "$IN2" >> /tmp/fastuniq.txt
 echo fastuniq -o $OUT1 -p $OUT2 -i /tmp/fastuniq.txt
 fastuniq -o $OUT1 -p $OUT2 -i /tmp/fastuniq.txt
+tot=$(wc -l $IN1| cut -f1 -d' ')
+uniq=$(wc -l $OUT1| cut -f1 -d' ')
+
+python -c "print( 'Duplicates removed: ' + str( ( ${tot} - ${uniq} )*1.0/${tot}   ))"
+
 rm $IN1 $IN2
-
-#
-#if [[ "${IN1}" == *.gz ]]
-#then
-#    gz="gzfastq "
-#else
-#    gz="fastq"
-#fi
-#
-#clone_filter  -1 $IN1 -2 $IN2  -o  ${RESULTS}/${SAMPLE_NAME}/  -y fastq -i $gz
-#
-#python3 -c "from glob import glob;from shutil import move;[ move(x,y)  for x,y in zip(glob(\"${RESULTS}/${SAMPLE_NAME}/*.fq\"),[\"$OUT1\",\"$OUT2\"])] "
-
+else
+  OUT1=/tmp/R1.fastq
+  OUT2=/tmp/R2.fastq
+fi
 
 
 #Limpiar adaptadores
@@ -79,42 +78,42 @@ IN2=$OUT2
 OUT1=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_1_cutadapt.fastq
 OUT2=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_2_cutadapt.fastq
 echo cutadapt -a file:$ADAPTERS -o "$OUT1" -p "$OUT2" "$IN1" "$IN2"
-cutadapt --cores="$CPUS" -a file:${ADAPTERS} -o "$OUT1" -p "$OUT2" "$IN1" "$IN2"
+cutadapt --cores="$CPUS" -a file:${ADAPTERS} -o "$OUT1" -p "$OUT2" "$IN1" "$IN2" 1>/dev/null
 rm "$IN1" "$IN2"
 
 #limpiar fastq con fastp o prinseq
 echo "Cleaning FASTQ...."
 IN1=$OUT1
 IN2=$OUT2
-OUT1=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_1_repaired.fastq
-OUT2=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_2_repaired.fastq
+OUT1=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_1_filtered.fastq
+OUT2=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_2_filtered.fastq
 echo fastp -f $TRIML -t $TRIMR -l $MINLEN -e $QPROM  --thread $CPUS -i $IN1 -I $IN2 -o $OUT1 -O $OUT2
 fastp -f $TRIML -t $TRIMR -l $MINLEN -e $QPROM  --thread $CPUS -i "$IN1" -I "$IN2" -o "$OUT1" -O "$OUT2"
 
-rm fastp.html  fastp.json "$IN1" "$IN2"
 
 
 fastqc "$OUT1" "$OUT2" -o "${RESULTS}/${SAMPLE_NAME}/" -q
 
+rm fastp.html  fastp.json "$IN1" "$IN2" ${RESULTS}/${SAMPLE_NAME}/*_fastqc.zip
+
+
+
+
 fi
 ################################
 
-
-
 ###########Mapping#############################
-if [ ! -f "${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_call.vcf.gz" ]; then
+if [ ! -f "${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_call_consensus.vcf.gz" ]; then
 
 echo "Mapping..."
-IN1=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_1_repaired.fastq
-IN2=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_2_repaired.fastq
+IN1=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_1_filtered.fastq
+IN2=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_2_filtered.fastq
 OUT1=${RESULTS}/${SAMPLE_NAME}/aln.sam
 OUT2=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_aln.bam
-STAT=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_flagstat.txt
 echo bwa mem -t "$CPUS" "$REFERENCE" "$IN1" "$IN2"
 bwa mem  -R "@RG\tID:group1\tSM:${SAMPLE_NAME}\tPL:illumina\\tLB:COVID19" -t "$CPUS" "$REFERENCE" "$IN1" "$IN2" > "$OUT1"
 samtools sort "$OUT1" -o "$OUT2"
 samtools index "$OUT2"
-samtools flagstat "$OUT2" > "$STAT"
 rm "$OUT1"
 
 echo "Calling variants..."
@@ -130,11 +129,10 @@ fi
 #low coverage & report
 IN=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_aln.bam
 TMP1=${RESULTS}/${SAMPLE_NAME}/my.sorted.bedgraph
-TMP2=${RESULTS}/${SAMPLE_NAME}/uncovered.intevals.bedgraph
-pileup.sh in=$IN   out=${RESULTS}/${SAMPLE_NAME}/aln_stats.txt  overwrite=true > ${RESULTS}/${SAMPLE_NAME}/cov_med.txt
+#pileup.sh in=$IN   out=${RESULTS}/${SAMPLE_NAME}/aln_stats.txt  overwrite=true 2> ${RESULTS}/${SAMPLE_NAME}/cov_med.txt
 bedtools genomecov -ibam $IN -bga > "$TMP1"
 awk '$4<10' "$TMP1" > "${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_uncovered.bed"
-rm "$TMP1" "$TMP2"
+rm "$TMP1"
 
 echo "filter variants"
 IN=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_call.vcf.gz
@@ -161,14 +159,14 @@ bcftools filter -i '(GT="het") && (FORMAT/DP>9) && (((FORMAT/AD[0:1]) / FORMAT/D
 
 bcftools sort -O z $TMP2 > $OUT
 bcftools index "$OUT"
-
+rm $IN ${IN}.tbi
 
 # Remove masking regions that overlaps with deletions with good coverare
 IN1=$OUT
 IN2="${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_uncovered.bed"
 OUT2="${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_uncovered2.bed"
 bcftools filter -i 'STRLEN(REF)>STRLEN(ALT)' "$IN1" | bedtools subtract -a "${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_uncovered.bed"  -b - > "$OUT2"
-
+rm $IN2
 
 echo "Getting consensus sequence..."
 IN1=$OUT
@@ -176,7 +174,7 @@ IN2=$OUT2
 OUT1="${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_consensus.fasta"
 bcftools index -f "$IN1"
 bcftools consensus -m "${IN2}" -f "$REFERENCE"  -o "${OUT1}.tmp1" "$IN1"
-bcftools consensus -f "$REFERENCE"  -o "${OUT1}.unmasked" "$IN1"
+
 
 result=$(python3 <<EOF
 import Bio.SeqIO as bpio
@@ -185,11 +183,6 @@ r.description = ''
 r.name = ''
 r.id = 'hCoV-19/Argentina/${SAMPLE_NAME}/2020'
 bpio.write(r,'${OUT1}','fasta')
-r = bpio.read('${OUT1}.unmasked','fasta')
-r.description = ''
-r.name = ''
-r.id = 'hCoV-19/Argentina/${SAMPLE_NAME}/2020'
-bpio.write(r,'${OUT1}.unmasked','fasta')
 EOF
 )
 rm "${OUT1}.tmp1"
@@ -202,8 +195,8 @@ if [ ! -f "${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_assembly.fna" ]; then
 
 
 echo "Getting assembly..."
-IN1=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_1_repaired.fastq
-IN2=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_2_repaired.fastq
+IN1=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_1_filtered.fastq
+IN2=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_2_filtered.fastq
 OUT2=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_assembly
 megahit -1 "$IN1" -2 "$IN2" -o "$OUT2"
 
@@ -237,7 +230,5 @@ TMP1=${RESULTS}/${SAMPLE_NAME}/nucdifftmp
 nucdiff --vcf yes  "$IN2" "$IN" "$TMP1" "$SAMPLE_NAME"
 mv "${TMP1}/results" "${RESULTS}/${SAMPLE_NAME}/nucdiff_denovo_consensus"
 rm -r "$TMP1"
-
-
 
 echo "DONE!"

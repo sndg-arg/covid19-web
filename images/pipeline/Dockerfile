@@ -42,9 +42,7 @@ RUN pip3 install NucDiff
 
 WORKDIR /ref
 
-RUN  wget -O /ref/MN996528.fna "https://www.ncbi.nlm.nih.gov/sviewer/viewer.cgi?tool=portal&save=file&log$=seqview&db=nuccore&report=fasta&id=1802633808&conwithfeat=on&withparts=on&hide-cdd=on"
-RUN makeblastdb -dbtype nucl -in /ref/MN996528.fna && bwa index MN996528.fna && samtools faidx MN996528.fna && \
-    samtools dict -o MN996528.dict MN996528.fna
+
 
 RUN pip3 install tqdm termcolor
 
@@ -69,6 +67,14 @@ COPY resources/adapters.fasta /ref/
 COPY resources/orfs.fna /ref/
 COPY resources/covid4snpeff.gb /app/snpEff/data/covid19/genes.gbk
 
+#RUN python3 -c 'import Bio.SeqIO as bpio;bpio.write(bpio.parse("/app/snpEff/data/covid19/genes.gbk","gb"),"/ref/WIV04.fna","fasta")'
+#RUN makeblastdb -dbtype nucl -in /ref/WIV04.fna && bwa index WIV04.fna && samtools faidx WIV04.fna && \
+#    samtools dict -o WIV04.dict WIV04.fna
+RUN  wget -O /ref/MN996528.fna "https://www.ncbi.nlm.nih.gov/sviewer/viewer.cgi?tool=portal&save=file&log$=seqview&db=nuccore&report=fasta&id=1802633808&conwithfeat=on&withparts=on&hide-cdd=on"
+RUN makeblastdb -dbtype nucl -in /ref/MN996528.fna && bwa index MN996528.fna && samtools faidx MN996528.fna && \
+    samtools dict -o MN996528.dict MN996528.fna
+
+
 RUN echo "covid19.genome : covid19" >> /app/snpEff/snpEff.config
 RUN echo "  covid19.chromosomes : MN996528" >> /app/snpEff/snpEff.config
 RUN cd /app/snpEff && java -jar snpEff.jar build -genbank -v covid19
@@ -81,13 +87,14 @@ COPY resources/process_batch.py /app/script/
 COPY resources/MSAMap.py /app/script/
 COPY resources/list_denovo_diffs.py /app/script/
 COPY resources/test_consensus.py /app/script/
+COPY resources/run_depth.py /app/script/
 
 COPY process_assembly.py /app/script/
 
 
 
 RUN chmod +x  /app/script/process_sample.sh  /app/script/process_batch.py /app/script/process_assembly.py \
-    /app/script/MSAMap.py /app/script/list_denovo_diffs.py /app/script/test_consensus.py
+    /app/script/MSAMap.py /app/script/list_denovo_diffs.py /app/script/test_consensus.py /app/script/run_depth.py
 
 RUN groupadd covid && useradd -r -u 1000 -g covid covid
 USER covid
