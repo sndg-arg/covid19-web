@@ -72,14 +72,14 @@ fi
 
 
 #Limpiar adaptadores
-echo "Removing adapters..."
-IN1=$OUT1
-IN2=$OUT2
-OUT1=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_1_cutadapt.fastq
-OUT2=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_2_cutadapt.fastq
-echo cutadapt -a file:$ADAPTERS -o "$OUT1" -p "$OUT2" "$IN1" "$IN2"
-cutadapt --cores="$CPUS" -a file:${ADAPTERS} -o "$OUT1" -p "$OUT2" "$IN1" "$IN2" 1>/dev/null
-rm "$IN1" "$IN2"
+#echo "Removing adapters..."
+#IN1=$OUT1
+#IN2=$OUT2
+#OUT1=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_1_cutadapt.fastq
+#OUT2=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_2_cutadapt.fastq
+#echo cutadapt -a file:$ADAPTERS -o "$OUT1" -p "$OUT2" "$IN1" "$IN2"
+#cutadapt --cores="$CPUS" -a file:${ADAPTERS} -o "$OUT1" -p "$OUT2" "$IN1" "$IN2" 1>/dev/null
+#rm "$IN1" "$IN2"
 
 #limpiar fastq con fastp o prinseq
 echo "Cleaning FASTQ...."
@@ -87,8 +87,8 @@ IN1=$OUT1
 IN2=$OUT2
 OUT1=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_1_filtered.fastq
 OUT2=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_2_filtered.fastq
-echo fastp -f $TRIML -t $TRIMR -l $MINLEN -e $QPROM  --thread $CPUS -i $IN1 -I $IN2 -o $OUT1 -O $OUT2
-fastp -f $TRIML -t $TRIMR -l $MINLEN -e $QPROM  --thread $CPUS -i "$IN1" -I "$IN2" -o "$OUT1" -O "$OUT2"
+echo fastp -f $TRIML -t $TRIMR -l $MINLEN -e $QPROM  --thread $CPUS -i $IN1 -I $IN2 -o $OUT1 -O $OUT2  --adapter_fasta ${ADAPTERS}
+fastp -f $TRIML -t $TRIMR -l $MINLEN -e $QPROM  --thread $CPUS -i "$IN1" -I "$IN2" -o "$OUT1" -O "$OUT2" --adapter_fasta "$ADAPTERS"
 
 
 

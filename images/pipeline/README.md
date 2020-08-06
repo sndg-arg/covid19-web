@@ -15,8 +15,12 @@ process_sample.sh /data/test_set/PAIS-A001_S35_L001_R1_001.fastq.gz /data/test_s
 ```
 
 # Run test
+
 ```shell script
-docker run -it --rm -v $PWD:/out sndg/covid19 bash -c 'process_batch.py -i test_samples/PAIS-A0001 -o ./results/'
+docker run -it --rm -v $PWD:/out sndg/covid19 bash -c 'process_batch.py -i test_samples/fortest/ -o ./results/'
+```
+```shell script
+docker run -it --rm -v $PWD:/out sndg/covid19 bash -c 'test_consensus.py results/'
 ```
 ```shell script
 docker run -it --rm -v $PWD:/out sndg/covid19 bash -c 'process_assembly.py -i results/FASTA -o results -p test_primers/PrimersGenomaSARS-CoV2Sanger.txt'
