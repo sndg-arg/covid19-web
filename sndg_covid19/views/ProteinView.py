@@ -87,7 +87,7 @@ def ProteinView(request, pk):
         prot_variants = []
     # prot_variants_table = variants_table(be)
 
-    msa = be.accession + ".faa"
+    msa = be.accession + "_msa.fasta"
     msa_file = f'{STATICFILES_DIRS[0]}/ORFs/{msa}'
     if not os.path.exists(msa_file):
         msa = None
