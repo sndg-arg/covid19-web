@@ -17,7 +17,7 @@
 
   document.addEventListener("DOMContentLoaded", function () {
 
-    const stage = new NGL.Stage("viewport", {backgroundColor: "black"});
+    const stage = new NGL.Stage("viewport", {backgroundColor: "grey"});
     stage.loadFile("{% url 'pdbdb:structure_raw_view' pdbid %}", {ext: "pdb"}). //defaultRepresentation: true
       then(function (component) {
         window.component = component;
@@ -72,8 +72,8 @@
           radialSegments:20,
           side:"double",
           radiusType:"size",
-          aspectRatio:2.0
-          // color: "red"
+          aspectRatio:10.0,
+          color: "blue"
         });
         representations["variants"].setVisibility(true);
         visible["variants"] = true;
@@ -99,9 +99,11 @@
           labelText: labelText,
           labelGrouping: "residue",
           radiusType: "size",
-          radiusScale: 9,
+          radiusScale: 12,
           showBackground: true,
-          backgroundColor: "black"
+          backgroundColor: "black",
+          colorScheme: "random",
+
 
 
           // color: "red"

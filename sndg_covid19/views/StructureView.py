@@ -96,8 +96,9 @@ class StructureView(TemplateView):
         if context["variants"]:
             context["layers"].append("variants")
             sele = []
+
             for v in context["variants"]:
-                sele.append(f'({v.residue.resid} and :{v.residue.chain} and .CA)')
+                    sele.append(f'({v.residue.resid} and :{v.residue.chain} and .CA)')
             context["variants_sele"] = " or ".join(set(sele))
         return context
 
@@ -150,13 +151,31 @@ class StructureStaticView(TemplateView):
         ).filter(variant__sample_variants__sample__country="Argentina", residue__pdb__code=context["pdb"]))
         context["pdbres2pos"] = {x.residue.chain + "_" + str(x.residue.resid): str(x.variant.pos + 1)
                                  for x in context["variants"]}
+
+
+
         if context["variants"]:
             context["layers"].append("variants")
             sele = []
             for v in context["variants"]:
-                sele.append(f'({v.residue.resid} and :{v.residue.chain} and .CA)')
+                sele.append(f'{v.residue.resid}_{v.residue.chain}')
             counter = Counter(sele)
-            context["variants_sele"] = " or ".join([k for k, v in counter.items() if v > 1])
+
+            varient_sele =  [k for k, v in counter.items() if v > 1]
+            chains = []
+            for x in varient_sele:
+                chains.append(x.split("_")[1])
+
+            sele = []
+            chain_sele =  list(set(chains))[0]
+            for v in varient_sele:
+                resid,chain = v.split("_")
+                if chain == chain_sele:
+                    sele.append(f'({resid} and :{chain} and .CA)')
+
+            context["variants_sele"] = " or ".join(sele)
+            # context["chains"] = [{"name": chain_sele} ]
+
         return context
 
 
