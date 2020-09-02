@@ -6,7 +6,7 @@ from datetime import datetime
 from io import StringIO
 import Bio.SeqIO as bpio
 
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand,CommandError
 
 from bioseq.models.Biodatabase import Biodatabase
 from sndg_covid19.io.CovidIO import CovidIO
@@ -22,8 +22,8 @@ class Command(BaseCommand):
 
     """
 
-    DEFAULT_COVID_DATA_URL = "https://www.ebi.ac.uk/uniprot/api/covid-19/uniprotkb/download?compressed=true&format=json&query=%2A"
-    DEFAULT_COVID_FASTA_URL = "https://www.ebi.ac.uk/uniprot/api/covid-19/uniprotkb/download?compressed=true&format=fasta&query=%2A"
+    DEFAULT_COVID_DATA_URL = "https://www.ebi.ac.uk/uniprot/api/covid-19/uniprotkb/stream?compressed=true&download=true&format=json&query=%2A"
+    DEFAULT_COVID_FASTA_URL = "https://www.ebi.ac.uk/uniprot/api/covid-19/uniprotkb/stream?compressed=true&download=true&format=fasta&query=%2A"
     DEFAULT_COVID_FASTA = "data/tmp/covid19.fasta"
     DEFAULT_UNIP_COVID_FASTA = "data/tmp/unip_covid19.fasta"
     DEFAULT_COVID_JSON = "data/tmp/unip_covid19.json"
@@ -145,8 +145,11 @@ class Command(BaseCommand):
         return seqs_extra
 
     def handle(self, *args, **options):
+        data = requests.get(options["unip_data_url"])
+        if not data.ok:
+            raise CommandError(data.text)
 
-        protein_data = requests.get(options["unip_data_url"]).json()["results"]
+        protein_data = data.json()["results"]
         with open(options["tmp_db_json"], "w") as h:
             import json
             json.dump(protein_data, h)

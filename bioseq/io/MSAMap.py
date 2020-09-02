@@ -17,6 +17,9 @@ class MSAMap():
         return list(self.seqs.keys())
 
     def init(self):
+        sizes = [len(x) for x in self.seqs.values()]
+        if len(set(sizes)) != 1:
+            raise ValueError(f"Not all sequences in the msa have the same length")
         curr_pos = {x: 0 for x in self.samples()}
         for msa_pos in range(self.aln_len()):
             for sample in self.samples():

@@ -38,7 +38,12 @@ class PDB2SQL():
             if i <= 2:
                 continue
             vec = line.strip().split("\t")
-            record = {x:vec[idx] for idx,x in enumerate(entries_columns)}
+            try:
+                record = {x:vec[idx] for idx,x in enumerate(entries_columns)}
+            except:
+                print(self.entries_path)
+                print(line)
+                raise
             data.append(record)
         self.entries_df = pd.DataFrame(data)
 

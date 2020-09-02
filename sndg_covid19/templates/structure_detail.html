@@ -70,11 +70,33 @@
         {% if variants %}
         representations["variants"] = component.addRepresentation("ball+stick", {
           sele: '{{variants_sele|safe}}',
-          scale: 0.5,
-          color: "red"
+          sphereDetail: 2,
+          linewidth:2,
+          radialSegments:20,
+          side:"double",
+          radiusType:"size",
+          aspectRatio:2.0
+          // color: "red"
         });
-        representations["variants"].setVisibility(false);
-        visible["variants"] = false;
+        representations["variants"].setVisibility(true);
+        visible["variants"] = true;
+
+        representations["variants_lbl"] = component.addRepresentation("label", {
+          sele: '{{variants_sele|safe}}',
+          labelType: "format",
+          labelFormat: "%(resname)s %(chainname)s%(resno)s",
+          labelGrouping: "residue",
+          radiusType: "vdw",
+          radiusScale: 1.2,
+          showBackground: true,
+          backgroundColor: "#522828"
+
+
+          // color: "red"
+        });
+        representations["variants_lbl"].setVisibility(true);
+        visible["variants_lbl"] = true;
+
         {% endif %}
 
 
@@ -160,43 +182,32 @@
     <h1>{{ object.accession }}</h1>
     <table class="table  table-responsive">
       <tr>
-        <td><b>Proteina</b></td>
-        <td>
+        <td><b>Proteina</b>
+
           {{ object.accession }}
-          <a href="{% url 'covid:gene_view' protein.bioentry_id %}"> {{ protein.accession }} </a>
-        </td>
-      </tr>
-      <tr>
-        <td><b>Descripción</b></td>
-        <td>
-
-          {{protein.name}} <br/>
+          <a href="{% url 'covid:gene_view' protein.bioentry_id %}"> {{ protein.accession }} </a><br/>
           {{protein.description}}
-
-        </td>
-      </tr>
-      {% if protein.genes %}
-      <tr>
-        <td><b>Nombre/Gen</b></td>
-        <td>
           {% for v in protein.genes %}
 
           {{ v }} <br/>
 
           {% endfor %}
         </td>
+        <td>
+          PDB <br />
+          <img src="{% static 'images/external.png' %}" alt="link a PDB"/>
+          <a href="https://www.rcsb.org/structure/{{pdbid}}">{{pdbid}}</a>
+        </td>
+        <td>
+          <a href="{% url 'covid:structure_static_view' protein.bioentry_id pdbid %}">Variantes en pantalla completa</a>
+          <br />
+          <a href="{% url 'covid:download_pdb_data' pdbid %}?download=1">Descargar anotación en formato json</a>
+        </td>
       </tr>
-      {% endif %}
 
-      <tr>
-        <td>PDB</td>
-        <td><img src="{% static 'images/external.png' %}" alt="link a PDB"/>
-          <a href="https://www.rcsb.org/structure/{{pdbid}}">{{pdbid}}</a></td>
-      </tr>
-      <tr>
-        <td colspan="2"> <a href="{% url 'covid:download_pdb_data' pdbid %}?download=1">Descargar anotación en formato json</a> </td>
 
-      </tr>
+
+
     </table>
   </div>
 </div>
@@ -347,6 +358,9 @@
           </div>
         </div></div>
       </div>
+
+
+{% if False %}
 <div class="row">
   <div class="col-md-12">
     <h3>Variantes</h3>
@@ -380,6 +394,7 @@
     </table>
   </div>
 </div>
+  {% endif %}
   <script>
     function zoom_variant(chain,resid) {
       window.component.autoView(":" + chain + " and " + resid.toString());
@@ -390,4 +405,5 @@
       }
     }
   </script>
+
 {% endblock %}

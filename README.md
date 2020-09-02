@@ -62,6 +62,12 @@ mkdir data/tmp
 ./manage.py import_genome -i data/curated/covid19.gb -a "COVID19" -n "COVID19" -t 2697049
 ./manage.py update_covid_data
 
+# check
+docker exec -u postgres -it sndgr psql
+> \l
+> \c sndgr 
+> \dt
+
 ```
     * Annotation
 ```bash
@@ -73,6 +79,14 @@ mkdir data/pdb
         * ./manage.py db2jbrowse --dbname COVID19
     * Create admin user
         * ./manage.py createsuperuser
+
+* Load variants data
+```console
+./manage.py process_covid_msa -i data/curated/test.fasta --override
+```
+
+* Cross variants with PDB residues and remove obsolete
+ ./manage.py update_covid_pdb
 
 * Start server
      ./manage.py runserver

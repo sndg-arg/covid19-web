@@ -57,9 +57,13 @@ def variant_graphics(gene: str, pos: int,fig_path,msa_file, msamap=None):
         if k == gene:
             continue
 
-        sample_date = datetime.datetime.strptime(k.split("|")[-1], '%Y-%m-%d').date()
-        month = sample_date.month
-        country = country_from_gisaid(k)
+        if "PAIS" in k:
+            month = 1
+            country = "Argentina"
+        else:
+            sample_date = datetime.datetime.strptime(k.split("|")[-1].split("_")[0], '%Y-%m-%d').date()
+            month = sample_date.month
+            country = country_from_gisaid(k)
 
         if country in latam_countries:
             latam.append(country)

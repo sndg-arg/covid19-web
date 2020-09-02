@@ -375,6 +375,12 @@ fabric.properties
 sndg_covid19/media/
 data/log/*
 sndg_covid19/static/auto/*
+sndg_covid19/static/ORFs/*
+sndg_covid19/static/rawORFs/*
+images/pipeline/results*
+data/tmp/*
+data/sndgr/*
+data/jbrowse/*
 
 .pytest_cache/
 

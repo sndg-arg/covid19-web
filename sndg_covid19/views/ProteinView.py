@@ -31,9 +31,24 @@ def url_map(db_map, dbname, accession):
         try:
             return dbx.url_template % accession
         except:
-            print(dbx.url_template)
             return (dbx.url_template)
     return "www.google.com?q=" + accession
+
+
+def MSAView(request, pk):
+    be = (Bioentry.objects
+          .prefetch_related("seq", "qualifiers__term", "qualifiers__term__dbxrefs__dbxref",
+                            # "dbxrefs__dbxref","qualifiers__term__dbxrefs__dbxref",
+                            "features__locations", "features__source_term",  # "dbxrefs__dbxref",
+                            "features__type_term__ontology", "features__qualifiers__term"))
+
+    be = be.get(bioentry_id=pk)
+    msa = be.accession + "_msa.fasta"
+    msa_file = f'{STATICFILES_DIRS[0]}/ORFs/{msa}'
+    if not os.path.exists(msa_file):
+        msa = None
+
+    return render(request, 'msa.html', {"object": be, "msa": msa})
 
 
 def ProteinView(request, pk):

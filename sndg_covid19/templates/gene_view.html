@@ -34,9 +34,7 @@
               href="#localization">Localización Celular</a>
               </div>
 
-  <div class="sidebar-sticky">
-    <a class="justify-content-between align-items-center px-3 mt-4 mb-1  btn{% if not msa %} disabled{% endif %}"
-       href="#msa">Alineamiento</a></div>
+
 
 <div class="sidebar-sticky">
  <a class="justify-content-between align-items-center px-3 mt-4 mb-1  btn{% if not dbxrefs %} disabled{% endif %}"
@@ -72,6 +70,12 @@
                   {% endif %}
                   {{object.description}}
             </p>
+
+{% if msa %}
+<a href="{% url 'covid:msa_view' object.bioentry_id %}"> Ver Alineamiento Múltiple </a>
+{% endif %}
+
+
 
 
             {% if functions.biological_process or functions.molecular_function %}
@@ -142,19 +146,7 @@
 
 
 
-{% if msa %}
 
-
-<div class="row">
-  <div class="col-12">
-  <h3 id="msa">Alineamiento Múltiple</h3>
-
-
-<div id="msaDiv"></div>
-  </div>
-</div>
-
-{% endif %}
 {% if dbxrefs %}
 <h3 id="other">Keywords Uniprot</h3>
 
@@ -481,53 +473,7 @@
                  $('#table_annotation').DataTable({"searching": true,pageLength:10, paging: true,"lengthChange": false });
                  {% endif %}
 
-                 {% if msa %}
-                 const opts = {};
-                 opts.el = '#msaDiv';
-                 opts.vis = {
 
-                   labelId: false,
-                   conserv: true,
-                   overviewbox: false,
-                   seqlogo: true,
-                 };
-                 opts.zoomer = {
-                   boxRectHeight: 1,
-                   boxRectWidth: 1,
-                   labelNameLength: 230,
-                   alignmentHeight: window.innerHeight * 0.8,
-                   labelFontsize: 12,
-                   labelIdLength: 50,
-                   leftOffset: 204
-                 };
-                 const m = msa(opts);
-                 $('#msaDiv').data(m);
-                 m.u.file.importURL('{% static "ORFs/"  %}{{msa}}', function(xx){
-                   m.seqs.models.forEach(seq =>{
-                     try {
-                     const name = Object.keys(seq.attributes.ids)[0].replace("hCoV-19/","");
-                     seq.name = name;
-                     seq.attributes.name = name;
-                     } catch (e) {
-
-                     }
-                   });
-                   m.seqs.comparator = "name";
-                   m.seqs.sort();
-                   m.render();
-                   $('#msaDiv').parent().css(   "box-sizing", "unset");
-                   $(".biojs_msa_marker span").css("white-space" , "nowrap");
-                 });
-
-                 // Fasta.read('{% static "ORFs/N_prot.fasta" %}', function (err, seqs) {
-                 //   // seqs.forEach(seq => {
-                 //   //   seq.id = seq.name;
-                 //   //   seq.name = tree_data[seq.id + "__"].organism;
-                 //   // });
-                 //   m.seqs.reset(seqs);
-                 //   m.render();
-                 // })
-                 {% endif %}
             </script>
 
 <script>

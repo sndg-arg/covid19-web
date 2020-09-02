@@ -23,7 +23,7 @@ class Command(BaseCommand):
     """
 
     DEFAULT_PDB_PATH = "/data/databases/pdb/"
-
+    DEFAULT_ALN_PATH = "data/processed/"
     help = 'Tinny DB for documentation and testing purposes'
 
     def __init__(self, *args, **kwargs):
@@ -33,6 +33,9 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('--pdb_dir',
                             default=os.environ.get("DEFAULT_PDB_PATH", Command.DEFAULT_PDB_PATH))
+        parser.add_argument('--alns_dir',
+                            default=os.environ.get("DEFAULT_ALN_PATH", Command.DEFAULT_ALN_PATH))
+
         parser.add_argument('--force', action="store_true")
 
     def remove_obsolete(self, protein):
@@ -43,7 +46,8 @@ class Command(BaseCommand):
                 if PDBsWS.is_obsolete(pdb):
                     pdbref.delete()
                     self.stderr.write(f"deleting {pdb}")
-                yield pdb
+                else:
+                    yield pdb
 
     def handle(self, *args, **options):
 
@@ -62,6 +66,7 @@ class Command(BaseCommand):
 
                         pbar_pdbs.set_description(pdb)
                         vs = StructureVariant(options["pdb_dir"])
+                        vs.aln_path = options["alns_dir"] + f"/{pdb}_{protein.accession}.faa"
                         vs.load_msa(prot_path, pdb, pdb_chain=None)
 
                         pvar_variants = self.tqdm(protein_variants)

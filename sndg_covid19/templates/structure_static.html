@@ -1,0 +1,191 @@
+
+
+{% load static %}
+<script src="{% static 'auto/main.js' %}"></script>
+
+
+
+
+
+<script>
+  const url = new URL(window.location.href);
+  const highlight_layers = (url.searchParams.has("layers")) ? url.searchParams.get("layers").split(",") : [];
+  const representations = {};
+  const visible = {};
+  let toogle_view = null;
+  let enabled_layer = false;
+
+  document.addEventListener("DOMContentLoaded", function () {
+
+    const stage = new NGL.Stage("viewport", {backgroundColor: "black"});
+    stage.loadFile("{% url 'pdbdb:structure_raw_view' pdbid %}", {ext: "pdb"}). //defaultRepresentation: true
+      then(function (component) {
+        window.component = component;
+        $("#spinner").remove()
+        toogle_view = (repr) => {
+          visible[repr] = !visible[repr];
+          representations[repr].setVisibility(visible[repr]);
+        };
+
+
+        {% for chain in chains %}
+        representations["{{chain.name}}"] = component.addRepresentation("cartoon", {
+          aspectRatio: 3.0,
+          scale: 1.5,
+          sele: "backbone and :{{chain.name}}" //,color:"blue"
+        });
+        visible["{{chain.name}}"] = true;
+        {% endfor %}
+
+        {% if "hetero" in layers %}
+        representations["hetero"] = component.addRepresentation("ball+stick", {
+          sele: "hetero AND NOT STP AND NOT water"
+        });
+        visible["hetero"] = true;
+        {% endif %}
+
+        {% if "water" in layers %}
+        representations["water"] = component.addRepresentation("spacefill", {
+          sele: "water",
+          scale: 0.5
+        });
+        representations["water"].setVisibility(false);
+        visible["water"] = false;
+        {% endif %}
+
+
+        {% if "dna" in layers %}
+        representations["dna"] = component.addRepresentation("cartoon", {
+          sele: "dna",
+          scale: 0.5
+        });
+        representations["dna"].setVisibility(true);
+        visible["dna"] = true;
+        {% endif %}
+
+
+        {% if variants %}
+        representations["variants"] = component.addRepresentation("ball+stick", {
+          sele: '{{variants_sele|safe}}',
+          sphereDetail: 2,
+          linewidth:2,
+          radialSegments:20,
+          side:"double",
+          radiusType:"size",
+          aspectRatio:2.0
+          // color: "red"
+        });
+        representations["variants"].setVisibility(true);
+        visible["variants"] = true;
+
+        var selectionObject = new NGL.Selection('{{variants_sele|safe}}');
+
+        const pdbres2pos = {{pdbres2pos|safe}} ;
+
+
+        var labelText = {};
+        component.structure.eachAtom(function(atomProxy) {
+          // if you don't want a label and can't be more specific with the selection
+          // set `labelText[atomProxy.index] = ""`
+          const prot_pos = pdbres2pos[atomProxy.chainname + "_" + atomProxy.resno];
+          labelText[atomProxy.index] =  atomProxy.resname + " " + prot_pos;
+        }, selectionObject);
+
+        representations["variants_lbl"] = component.addRepresentation("label", {
+          sele: '{{variants_sele|safe}}',
+          // labelType: "format",
+          // labelFormat: "%(resname)s %(chainname)s%(resno)s",
+          labelType: "text",
+          labelText: labelText,
+          labelGrouping: "residue",
+          radiusType: "size",
+          radiusScale: 9,
+          showBackground: true,
+          backgroundColor: "black"
+
+
+          // color: "red"
+        });
+        representations["variants_lbl"].setVisibility(true);
+        visible["variants_lbl"] = true;
+
+        {% endif %}
+
+
+        {% for p in pockets %}
+          representations["{{p.name}}_apol"] = component.addRepresentation("surface", {
+            sele: "STP AND .APOL AND {{p.name}}",
+            multipleBond: false,
+            color: "white"
+
+          });
+
+          representations["{{p.name}}_pol"] = component.addRepresentation("surface", {
+            sele: "STP AND .POL AND {{p.name}}",
+            multipleBond: false,
+            color: "black"
+
+          });
+
+          enabled_layer = highlight_layers.indexOf("{{p.name}}") != -1;
+          visible["{{p.name}}_pol"] =  enabled_layer;
+          visible["{{p.name}}_apol"] = enabled_layer;
+          representations["{{p.name}}_pol"].setVisibility(enabled_layer);
+          representations["{{p.name}}_apol"].setVisibility(enabled_layer);
+
+          representations["{{p.name}}_atm"] = component.addRepresentation("ball+stick", {
+            sele: 'NOT STP AND NOT water AND {{p.residues|join:" or "}}',
+            color: "purple"
+          });
+          visible["{{p.name}}_atm"] = false;
+          representations["{{p.name}}_atm"].setVisibility(false);
+
+
+          representations["{{p.name}}_lbl"] = component.addRepresentation("label", {
+            labelType: "atom",
+            sele: 'NOT STP AND {{p.residues|join:" or "}}',
+          });
+          visible["{{p.name}}_lbl"] = false;
+          representations["{{p.name}}_lbl"].setVisibility(false);
+
+        {% endfor %}
+
+        {% for rs in residuesets %}
+        enabled_layer = highlight_layers.indexOf("{{rs.name}}") != -1;
+        representations["{{rs.name}}"] = component.addRepresentation("ball+stick", {
+          sele: '{{rs.sele|safe}}'
+
+        });
+        visible["{{rs.name}}"] = enabled_layer;
+        representations["{{rs.name}}"].setVisibility(enabled_layer);
+        {% endfor %}
+
+
+
+
+
+        component.autoView();
+
+        if (url.searchParams.get("highlight")) {
+          representations["highlight"] = component.addRepresentation("ball+stick", {
+            sele: url.searchParams.get("highlight"),
+            scale: 0.5
+          });
+          component.autoView(url.searchParams.get("highlight"))
+
+        }
+        highlight_layers.forEach(x=>$("#chk_" + x).prop('checked', true) )
+
+      });
+  });
+</script>
+
+    <div id="viewport" style="width:100%; height:100%;">
+
+      <img id="spinner" src="{% static 'images/spinner.gif' %}" alt="cargando..."/>
+
+    </div>
+
+
+
+

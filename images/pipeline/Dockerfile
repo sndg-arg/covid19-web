@@ -64,6 +64,8 @@ RUN wget -O /app/FastUniq-1.1.tar.gz https://ufpr.dl.sourceforge.net/project/fas
     && rm -r /app/FastUniq-1.1.tar.gz /app/FastUniq
 
 COPY resources/adapters.fasta /ref/
+COPY resources/artic_primers.fasta /ref/
+
 COPY resources/orfs.fna /ref/
 COPY resources/covid4snpeff.gb /app/snpEff/data/covid19/genes.gbk
 

@@ -23,14 +23,15 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         pdbs = PDBs()
         parser.add_argument('--pdbs_dir', default="data/pdb/")
-        parser.add_argument('--entries_path', default="data/pdb/entries.idx")
-        parser.add_argument('--only_annotated', action='store_false')
+        parser.add_argument('--entries_path', default=None)
+        parser.add_argument('--only_annotated', action='store_false',help="by default only cross referenced pdbs are downloaded")
         parser.add_argument('--entries_url', default=pdbs.url_pdb_entries)
 
     def handle(self, *args, **options):
         pdbs_utils = PDBs(pdb_dir=options['pdbs_dir'])
         pdbs_utils.url_pdb_entries = options["entries_url"]
-
+        if not options['entries_path']:
+            options['entries_path'] = options['pdbs_dir'] + "/entries.idx"
         if (datetime.now() - datetime.fromtimestamp(os.path.getctime(options["entries_path"])) ).days > 7:
             pdbs_utils.download_pdb_entries()
 
@@ -73,4 +74,6 @@ class Command(BaseCommand):
                 except KeyboardInterrupt:
                     raise
                 except Exception as ex:
+                    import traceback;
+                    traceback.print_exc()
                     raise CommandError(ex)

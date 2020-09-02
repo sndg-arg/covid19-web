@@ -15,7 +15,7 @@ from glob import glob
 from tqdm import tqdm
 import collections
 import re
-
+import sys
 
 ## Functions ##
 def exec(cmd, verbose=False):
@@ -45,26 +45,29 @@ def get_codon(pos, genes_dict, gene):
             else:
                 return (pos, pos + 3, pos_aa)
 
-def fix_msa (genes, gene):
+
+def fix_msa(genes, gene):
     i = 0
     for loc in genes[gene]["gapped_coding_location"]:
         while i < (int(loc[1]) - int(loc[0])):
-            codon = genes[gene]["dna_seq"][i:i+3]
+            codon = genes[gene]["dna_seq"][i:i + 3]
             if '-' in codon:
                 extra_seq = ''
                 start = i
                 i += 3
-                next_codon = genes[gene]["dna_seq"][i:i+3]
+                next_codon = genes[gene]["dna_seq"][i:i + 3]
                 while next_codon == '---':
                     extra_seq += next_codon
                     i += 3
-                    next_codon = genes[gene]["dna_seq"][i:i+3]
-                if re.search( '\w\w-', codon) and re.search( '--\w', next_codon):
+                    next_codon = genes[gene]["dna_seq"][i:i + 3]
+                if re.search('\w\w-', codon) and re.search('--\w', next_codon):
                     new_codon = codon[0:2] + next_codon[-1]
-                    genes[gene]["dna_seq"] = genes[gene]["dna_seq"][:start] + new_codon + extra_seq + "---" + genes[gene]["dna_seq"][i+3:]
-                elif re.search( '\w--', codon) and re.search( '-\w\w', next_codon):
+                    genes[gene]["dna_seq"] = genes[gene]["dna_seq"][:start] + new_codon + extra_seq + "---" + \
+                                             genes[gene]["dna_seq"][i + 3:]
+                elif re.search('\w--', codon) and re.search('-\w\w', next_codon):
                     new_codon = codon[0] + next_codon[1:3]
-                    genes[gene]["dna_seq"] = genes[gene]["dna_seq"][:start] + "---" + extra_seq + new_codon + genes[gene]["dna_seq"][i+3:]
+                    genes[gene]["dna_seq"] = genes[gene]["dna_seq"][:start] + "---" + extra_seq + new_codon + \
+                                             genes[gene]["dna_seq"][i + 3:]
             i += 3
 
 
@@ -110,7 +113,7 @@ else:
 general_report = "Secuencia\tReferencia usada\tLargo (nt)\t# Ns\t%Ns\tGenes completos\tGenes incompletos\tGenes no encontrados\t# Mut. (nt)\t% Mut.\t# Mut. Sin.\t# Mut. No Sin.\n"
 genes_report = "Gen\tMuestra\tLargo\tInicio\tFin\tBases_identicas\tMismatches\tInserciones\tDeleciones\tNs\t%Ns\tMutaciones_sinonimas\tMutaciones_no_sinonimas\n"
 record = bpio.read(args.annotation, "genbank")
-ref_id = bpio.read(args.reference, "fasta").id
+ref_id = "SARS-CoV-2_WIV04_2019"
 sample_to_warn = {}
 
 with open(f"{out}/primers.txt", "w") as hw:
@@ -130,6 +133,9 @@ for item in pbar:
 
     cmd = f'cat  {args.reference} {fasta_file} > /tmp/seqs.fasta'
     exec(cmd, verbose=verbose)
+    cmd = f'sed -i s/MN996528.1/SARS-CoV-2_WIV04_2019/ /tmp/seqs.fasta'
+    exec(cmd, verbose=verbose)
+
     cmd = f'mafft --auto /tmp/seqs.fasta > {msa} 2>>"{out}/samples/{sample}/log.txt"'
     exec(cmd, verbose=verbose)
 
@@ -269,24 +275,26 @@ for item in pbar:
                             ins_codon += str(sample_genes[gene]["dna_seq"][a]).upper()
                         else:
                             ins_codon += str(sample_genes[gene]["dna_seq"][a])
-                    warn = sample_id+"\t"+gene+"\t"+str(start)+"-"+str(end-1)+"\t"+ins_codon+"\tinsercion"
-                    sample_to_warn[warn] = {"bool" : 1}
+                    warn = sample_id + "\t" + gene + "\t" + str(start) + "-" + str(
+                        end - 1) + "\t" + ins_codon + "\tinsercion"
+                    sample_to_warn[warn] = {"bool": 1}
 
                 if "-" not in str(sample_genes[gene]["dna_seq"][start:end]):
                     sample_aa = Seq(str(sample_genes[gene]["dna_seq"][start:end])).translate()
                     if sample_aa == "*":
                         sample_aa = "STOP"
-                elif str(sample_genes[gene]["dna_seq"][start:end]) == "---" :
+                elif str(sample_genes[gene]["dna_seq"][start:end]) == "---":
                     sample_aa = "-"
                 else:
                     sample_aa = "*"
-                    warn = sample_id+"\t"+gene+"\t"+str(start)+"-"+str(end-1)+"\t"+str(sample_genes[gene]["dna_seq"][start:end])+"\tdelecion"
-                    sample_to_warn[warn] = {"bool" : 1}
+                    warn = sample_id + "\t" + gene + "\t" + str(start) + "-" + str(end - 1) + "\t" + str(
+                        sample_genes[gene]["dna_seq"][start:end]) + "\tdelecion"
+                    sample_to_warn[warn] = {"bool": 1}
                 if ref_aa != sample_aa:
                     mut = ref_aa[0] + str(aa_pos) + sample_aa[0]
                     genomes[sample_id]["non_syn_mut"] += 1
                     sample_genes[gene]["non_syn_mut"][aa_pos - len(ref_genes[gene]["gaps"])] = {"ref": str(ref_aa),
-                                                                                                    "alt": str(sample_aa)}
+                                                                                                "alt": str(sample_aa)}
                 else:
                     sample_genes[gene]["syn_mut"][int(i + 1 - (len(ref_genes[gene]["gaps"]) * 3))] = {
                         "ref": ref_genes[gene]["dna_seq"][i], "alt": sample_genes[gene]["dna_seq"][i]}
@@ -299,25 +307,25 @@ for item in pbar:
     general_report += sample_id + "\t" + record.id + "\t"
     general_report += str(genomes[sample_id]["length"]) + "\t"
     general_report += str(genomes[sample_id]["Ns"]) + "\t"
-    general_report += str(round(genomes[sample_id]["Ns"] / int(genomes[sample_id]["length"])*100, 2)) + "\t"
+    general_report += str(round(genomes[sample_id]["Ns"] / int(genomes[sample_id]["length"]) * 100, 2)) + "\t"
     general_report += str(len(genomes[sample_id]["complete_genes"])) + "\t"
     general_report += str(len(genomes[sample_id]["incomplete_genes"])) + "\t"
     general_report += str(len(genomes[sample_id]["absent_genes"])) + "\t"
     general_report += str(genomes[sample_id]["mut"]) + "\t"
-    general_report += str(round(genomes[sample_id]["mut"] / genomes[sample_id]["length"]*100, 2)) + "\t"
+    general_report += str(round(genomes[sample_id]["mut"] / genomes[sample_id]["length"] * 100, 2)) + "\t"
     general_report += str(genomes[sample_id]["syn_mut"]) + "\t"
     general_report += str(genomes[sample_id]["non_syn_mut"]) + "\n"
 
     for gene in ref_genes:
         genes_report += gene + "\t" + sample_id + "\t" + str(ref_genes[gene]["length"]) + "\t"
-        genes_report += str(int(sample_genes[gene]["coding_location"][0][0])-genomes[sample_id]["n_start"]+1) + "\t"
-        genes_report += str(int(sample_genes[gene]["coding_location"][-1][1])-genomes[sample_id]["n_start"]) + "\t"
+        genes_report += str(int(sample_genes[gene]["coding_location"][0][0]) - genomes[sample_id]["n_start"] + 1) + "\t"
+        genes_report += str(int(sample_genes[gene]["coding_location"][-1][1]) - genomes[sample_id]["n_start"]) + "\t"
         genes_report += str(sample_genes[gene]["ident"]) + "\t"
         genes_report += str(sample_genes[gene]["mut"]) + "\t"
         genes_report += str(sample_genes[gene]["insertions"]) + "\t"
         genes_report += str(sample_genes[gene]["deletions"]) + "\t"
         genes_report += str(sample_genes[gene]["Ns"]) + "\t"
-        genes_report += str(round(sample_genes[gene]["Ns"]/ref_genes[gene]["length"]*100, 2)) + "\t"
+        genes_report += str(round(sample_genes[gene]["Ns"] / ref_genes[gene]["length"] * 100, 2)) + "\t"
         for m in sample_genes[gene]["syn_mut"]:
             genes_report += str(sample_genes[gene]["syn_mut"][m]["ref"]) + str(m) + str(
                 sample_genes[gene]["syn_mut"][m]["alt"]) + ";"
@@ -335,21 +343,31 @@ for item in pbar:
         cmd = f'python3 /app/script/MSAMap.py -r SARS-CoV-2_WIV04_2019  -i {msa} >> "{out}/samples/{sample}/{sample}_variants.vcf" 2>>"{out}/samples/{sample}/log.txt"'
         exec(cmd, verbose=verbose)
 
-        cmd = f'java -jar /app/snpEff/snpEff.jar -stats {out}/samples/{sample}/snpEff.html covid19  "{out}/samples/{sample}/{sample}_variants.vcf" > "{out}/samples/{sample}/{sample}_ann.vcf" 2>>"{out}/samples/{sample}/log.txt"'
+        cmd = f'grep "^#" "{out}/samples/{sample}/{sample}_variants.vcf" > "{out}/samples/{sample}/{sample}_ann.tmp"   2>>"{out}/samples/{sample}/log.txt"'
+        exec(cmd, verbose=verbose)
+        cmd = f'grep -v N "{out}/samples/{sample}/{sample}_variants.vcf" >> "{out}/samples/{sample}/{sample}_ann.tmp"   2>>"{out}/samples/{sample}/log.txt"'
         exec(cmd, verbose=verbose)
 
-        with open(f'{out}/samples/{sample}/{sample}_ann.vcf') as h, open(f'{out}/samples/{sample}/{sample}_vars.txt',
-                                                                         "w") as hw:
+        cmd = f'java -jar /app/snpEff/snpEff.jar -stats {out}/samples/{sample}/snpEff.html covid19  "{out}/samples/{sample}/{sample}_ann.tmp" > "{out}/samples/{sample}/{sample}_ann.vcf" 2>>"{out}/samples/{sample}/log.txt"'
+        exec(cmd, verbose=verbose)
+
+        ann = {}
+        with open(f'{out}/samples/{sample}/{sample}_ann.vcf') as h, open(
+                f'{out}/samples/{sample}/{sample}_vars.txt', "w") as hw:
             hw.write("pos ref alt annotation gene hgvs_c hgvs_p\n")
             for line in h:
                 if not line.startswith("#"):
                     contig, pos, _, ref, alt, _, _, info = line.split("\t")[:8]
                     ann_str = info.split("ANN=")[1].split(",")[0]
-
+                    # try:
                     (alt, annotation, impact, gene, geneid, feature_type, feature_id, transcript_biotype,
                      rank_div_total, hgvs_c, hgvs_p, c_dna_pos, cds_pos, (aa_pos_aa_len), dist_to_feature,
-                     errors) = ann_str.split("|")
+                     errors) = ann_str.split("|")[:16]
+                    ann[pos] = [pos, ref, alt, annotation, gene, hgvs_c, hgvs_p]
                     hw.write(" ".join([pos, ref, alt, annotation, gene, hgvs_c, hgvs_p]) + "\n")
+                    # except:
+                    #     if verbose:
+                    #         sys.stderr.write(str(ann_str.split("|")) + "\n")
 
         cmd = f'blastn -task "blastn-short"  -query {primers} -db {args.reference} -qcov_hsp_perc 100 -outfmt "6 sseqid sstart send qseqid" > /tmp/{sample}primers_raw.bed 2>/dev/null'
         exec(cmd, verbose=verbose)
@@ -359,7 +377,11 @@ for item in pbar:
                 if int(vec[1]) > int(vec[2]):
                     vec[1], vec[2] = vec[2], vec[1]
                 h.write("\t".join(vec))
-        cmd = f'bedtools  intersect -a "{out}/samples/{sample}/{sample}_ann.vcf" -b "{out}/samples/{sample}/primers.bed" -wb > "/tmp/{sample}primers.intersect" 2>>"{out}/samples/{sample}/log.txt"'
+
+        cmd = f'sed -i s/MN996528.1/SARS-CoV-2_WIV04_2019/g {out}/samples/{sample}/primers.bed'
+        exec(cmd, verbose=verbose)
+
+        cmd = f'bedtools  intersect -a "{out}/samples/{sample}/{sample}_variants.vcf" -b "{out}/samples/{sample}/primers.bed" -wb > "/tmp/{sample}primers.intersect" 2>>"{out}/samples/{sample}/log.txt"'
         exec(cmd, verbose=verbose)
         with open(f'/tmp/{sample}primers.intersect') as h, open(f'{out}/samples/{sample}/{sample}_primers.txt',
                                                                 "w") as hw:
@@ -383,7 +405,7 @@ for item in pbar:
                         if "N" in alt:
                             alt = "Presence of Ns in the region"
                         else:
-                            alt = f'{ref[max(pos, start) - pos:end - pos + 1 ]}->{alt[max(pos, pstart) - pstart:end - pstart + 1 ]}'
+                            alt = f'{ref[max(pos, start) - pos:end - pos + 1]}->{alt[max(pos, pstart) - pstart:end - pstart + 1]}'
                 hw.write("\t".join([sample, primer, str(start), str(pos_primer), alt]) + "\n")
 
         cmd = f'grep -v "^#" "{out}/samples/{sample}/{sample}_primers.txt" >> {out}/primers.txt'
@@ -395,7 +417,9 @@ with open(f"{out}/output_general.tsv", 'w') as general_output, open(f"{out}/outp
 
 if sample_to_warn:
     import sys
-    sys.stderr.write ("WARNING: Hubo muestras con inserciones/deleciones menores a un triplete. Para mas informacion ver el archivo log_warnings.txt\n")
+
+    sys.stderr.write(
+        "WARNING: Hubo muestras con inserciones/deleciones menores a un triplete. Para mas informacion ver el archivo log_warnings.txt\n")
     warnings_report = "Muestra\tGen\tPosicion\tCodon\tTipo\n"
     for i in sample_to_warn:
         warnings_report += str(i) + "\n"
