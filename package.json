@@ -20,7 +20,7 @@
     "query-string": "^4.3.2",
     "sequence-viewer": "^0.2.18",
     "ngl": "next",
-    "datatables.net": "^1.10.20",
+    "datatables.net": "^1.10.22",
     "datatables.net-dt": "^1.10.20",
     "minimist": ">=0.2.1",
     "minimatch": ">=3.0.2",
