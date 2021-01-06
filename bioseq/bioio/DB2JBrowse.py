@@ -192,3 +192,13 @@ class DB2JBrowse():
                    acc=self.accession, labels=",".join(["Sequence", "Genes"]))  # --className  feature
 
         sp.call(cmd, shell=True)
+
+
+if __name__ == "__main__":
+    from SNDG.Structure.PDBs import PDBs
+    import argparse
+    parser = argparse.ArgumentParser(description='Jbrowse utils')
+
+    parser.add_argument('-i', '--pdbs_dir', help="pdbs_directory", default="/data/databases/pdb/")
+
+    args = parser.parse_args()

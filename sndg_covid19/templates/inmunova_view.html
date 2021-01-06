@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load static %}
+{% load i18n %}
+{% load bioresources_extras %}
+
+{% load static %}
+
+
+{% block javascripts%}
+
+
+{% endblock %}
+
+{% block content %}
+
+  <h3 id="variants">Variantes</h3>
+
+
+  <div id="variants_output" style="margin: 30px;">
+    <table class="table table-condensed table-responsive">
+      <tr><th>Pos</th><th>Ref</th><th>Alt</th>
+        {%  for year_month in year_months %}
+          <th>{{ year_month }}</th>
+        {% endfor %}
+        <th>Info Struct</th></tr>
+      {% for variant in variants %}
+        <tr>
+          <td>
+            <a href="{% url 'covid:pos_stats' object.accession variant.pos %}"> {{variant.pos}}</a></td> <td>{{variant.ref}}</td> <td>{{variant.alt}}
+          </td>
+
+             {%  for year_month in year_months %}
+               <td>
+               {% if variant|getattribute:year_month %}
+                {{ variant|getattribute:year_month }}
+              {% else %}
+                 0
+               {% endif %} / {{ month_counts|getattribute:year_month|default_if_none:"?" }}
+               </td>
+            {% endfor %}
+{#            {% for country in latam_countries %}#}
+{#            {% if variant|getattribute:country %}#}
+{#              {{country}}:{{ variant|getattribute:country }}#}
+{#            {% endif %}#}
+{#          {%endfor%}#}
+
+          <td>
+
+            Mapeado en  {{  variant.struct.pdbs|length }}
+{#            <a href="{% url 'covid:pos_stats' object.accession variant.pos %}">estructuras</a>.#}
+
+            {% if  variant.struct.sites %}<br />
+              En regiones de interés tipo:
+              {{variant.struct.sites|join:' - '}}
+            {% endif %}
+            </a>
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+  </div>
+
+
+{% endblock %}

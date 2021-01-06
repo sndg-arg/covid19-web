@@ -4,7 +4,7 @@ from .views.AssemblyView import assembly_view
 from .views.ProteinView import ProteinView,MSAView
 from .views.StructureView import StructureView,pdb_download,StructureStaticView
 from .views.ProjectStrainsView import ProjectStrainsView
-from .views.VariantView import VariantView,pdb_variants_download
+from .views.VariantView import VariantView,pdb_variants_download,InmunovaView
 
 
 
@@ -29,5 +29,6 @@ urlpatterns = [
     path('project/', ProjectStrainsView.as_view(), name='project_strains'),
     path('variant/<str:gene>/<int:pos>', VariantView.as_view(), name='pos_stats'),
     path('variant/', pdb_variants_download, name='download_pdb_variants'),
+    path('variant/inmunova', InmunovaView.as_view(), name='inmunova'),
     # path('static/jbrowse/data/COVID19/trackList2.json', assembly_view, name='genome_view'),
 ]

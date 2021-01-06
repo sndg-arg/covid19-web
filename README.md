@@ -101,3 +101,4 @@ mkdir data/pdb
     * ./manage.py collectstatic 
     * docker exec sndgr pg_dump -U postgres sndgr | gzip > ./2020_06_02_covid.sql.gz
     * zcat ./2020_06_02_covid.sql.gz | docker exec -i sndgr psql -U postgres -d covid -
+    * scp -r ./sndg_covid19/static/auto/posfigs server:deploy/covid19-web/data/static/auto/posfigs

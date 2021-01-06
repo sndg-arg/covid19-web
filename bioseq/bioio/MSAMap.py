@@ -16,12 +16,12 @@ class MSAMap():
     def samples(self):
         return list(self.seqs.keys())
 
-    def init(self):
+    def init(self,fn=list):
         sizes = [len(x) for x in self.seqs.values()]
         if len(set(sizes)) != 1:
             raise ValueError(f"Not all sequences in the msa have the same length")
         curr_pos = {x: 0 for x in self.samples()}
-        for msa_pos in range(self.aln_len()):
+        for msa_pos in fn(range(self.aln_len())):
             for sample in self.samples():
                 if self.seqs[sample][msa_pos] != self.gap_code:
                     self.pos_msa_seq_map[sample][msa_pos] = curr_pos[sample]

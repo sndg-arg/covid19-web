@@ -17,13 +17,13 @@ from config.settings.base import STATICFILES_DIRS
 from math import ceil
 
 from sndg_covid19.views import latam_countries
-from bioseq.io.MSAMap import MSAMap
+from bioseq.bioio.MSAMap import MSAMap
 
-fechas = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio"]
+fechas = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio","Agosto","Septiembre"]
 
-from sndg_covid19.io import country_from_gisaid
+from sndg_covid19.bioio import country_from_gisaid
 import numpy as np
-
+from dateutil.relativedelta import relativedelta
 
 def autolabel(ax, y):
     for i, v in enumerate(y):
@@ -41,8 +41,6 @@ def variant_graphics(gene: str, pos: int,fig_path,msa_file, msamap=None):
     :return:
     """
 
-
-
     msa = bpio.to_dict(bpio.parse(msa_file, "fasta"))
 
     if not msamap:
@@ -57,13 +55,9 @@ def variant_graphics(gene: str, pos: int,fig_path,msa_file, msamap=None):
         if k == gene:
             continue
 
-        if "PAIS" in k:
-            month = 1
-            country = "Argentina"
-        else:
-            sample_date = datetime.datetime.strptime(k.split("|")[-1].split("_")[0], '%Y-%m-%d').date()
-            month = sample_date.month
-            country = country_from_gisaid(k)
+        sample_date = datetime.datetime.strptime(k.split("|")[-1].split("_")[0], '%Y-%m-%d').date()
+        month = sample_date.month
+        country = country_from_gisaid(k)
 
         if country in latam_countries:
             latam.append(country)
@@ -99,11 +93,14 @@ def variant_graphics(gene: str, pos: int,fig_path,msa_file, msamap=None):
     # d1 = df.set_index(['month']).sort_index()
     with_data = list(df.country.unique())
     fig, axs = plt.subplots(ceil(len(with_data) / 2), 2, sharex=True, figsize=(10, 10))
+    dates = list(get_last_months(datetime.datetime.now(),11))
+    max_month = dates[-1][1] + dates[-1][0] * 100
+    min_month = dates[0][1] + dates[0][0] * 100
     for idx, country in enumerate(sorted(with_data)):
         dfp = df[df.country == country]
         dfp["prop"] = [x["count"] / sum(list(dfp[dfp.month == x.month]["count"])) * 100 for _, x in dfp.iterrows()]
         aas = list(dfp.aa.unique())
-        for month in range(2, 6):
+        for month in range(min_month, max_month):
             if month not in list(dfp.month):
                 for aa in aas:
                     dfp = dfp.append({"aa": aa, "count": 0, "month": month}, ignore_index=True)
@@ -126,3 +123,8 @@ def variant_graphics(gene: str, pos: int,fig_path,msa_file, msamap=None):
 
         autolabel(ax, list(dfp2.values))
     plt.savefig(fig_path)
+
+def get_last_months(start_date, months):
+    for i in range(months):
+        yield (start_date.year,start_date.month)
+        start_date += relativedelta(months = -1)

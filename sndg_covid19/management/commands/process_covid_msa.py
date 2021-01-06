@@ -5,18 +5,18 @@ import Bio.SeqIO as bpio
 from django.core.management.base import BaseCommand, CommandError
 from tqdm import tqdm
 
-from bioseq.io.MSAMap import MSAMap
+from bioseq.bioio.MSAMap import MSAMap
 from bioseq.models.Bioentry import Bioentry
 from bioseq.models.Variant import Variant, SampleVariant, Sample
 from config.settings.base import STATICFILES_DIRS
-from sndg_covid19.io import country_from_gisaid
+from sndg_covid19.bioio import country_from_gisaid
 from sndg_covid19.tasks import variant_graphics
 from glob import glob
 import traceback
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 import math
-
+import json
 
 class Command(BaseCommand):
     """
@@ -31,12 +31,12 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("-r", '--reference', default="MN908947.3", help="ref sequence, default='MN908947.3'")
-        # parser.add_argument('-a', '--accession', help="If input_msa is a file is required", required=False)
         parser.add_argument("-i", '--input_msa', required=True,
                             help="Could be a fasta msa file or a directory that contains a list of them")
         parser.add_argument("-o", '--outdir_msa', default="data/processed/", help="directory for protein MSAs")
         parser.add_argument("-pc", '--precompute_graphics', help="skip precompute", action="store_false")
         parser.add_argument("--override", help="override msa and graphics. Default: False", action="store_true")
+        parser.add_argument("--remove", help="when override is ON, samples with this filter are deleted", default=None)
 
     def create_aa_msa(self, genomic_msa, ref="MN908947.3", aa_msa_dir="data/processed/", override=False):
         covid = Bioentry.objects.get(biodatabase__name="COVID19")  # genome bioentry
@@ -48,7 +48,8 @@ class Command(BaseCommand):
             msas.append(msa_file)
             if override or (not os.path.exists(msa_file)) or (os.path.getsize(msa_file) < 100):
                 with open(msa_file, "w") as h:
-                    for sample in tqdm(genomic_msa.samples(), file=self.stderr):
+                    # pbar = tqdm(genomic_msa.samples(), file=self.stderr)
+                    for sample in genomic_msa.samples():
                         ok = True
                         if sample != ref:
 
@@ -96,9 +97,29 @@ class Command(BaseCommand):
             os.makedirs(options['outdir_msa'])
         assert os.path.exists(options['outdir_msa']), f'could not create {options["outdir_msa"]}'
 
-        msa = MSAMap(bpio.to_dict(bpio.parse(input_msa, "fasta")))
-        msa.init()
+        sample_filter = None
+        if options["remove"]:
+            sample_filter = json.loads(options["remove"])
 
+
+
+        msa = MSAMap(bpio.to_dict(bpio.parse(input_msa, "fasta")))
+        self.stderr.write("Initializing MSA...\n")
+        msa.init(tqdm)
+        if options["override"]:
+            self.stderr.write("deleting current samples")
+            if sample_filter:
+                print(sample_filter)
+                qs = Sample.objects.filter(**sample_filter)
+                count = qs.count()
+                if count:
+                    qs.delete()
+                    self.stderr.write(f"deleted: {count}")
+            else:
+                self.stderr.write(Sample.objects.all().delete())
+            self.stderr.write("\n")
+
+        self.stderr.write("AA Processing\n")
         self.create_aa_msa(msa, ref=ref_seq, aa_msa_dir=options['outdir_msa'], override=options["override"])
 
         expected_files = set(
@@ -106,32 +127,16 @@ class Command(BaseCommand):
         files = (set(os.listdir(options['outdir_msa'])) & expected_files) - set(['orf1ab_msa.fasta'])
         if len(files) == 0:
             raise CommandError(f'in {input_msa} cannot find any of the following files {" ".join(expected_files)}')
+
+
+        self.stderr.write("processing files...")
+
         pbar = tqdm(files, file=self.stderr)
         for msa_file in pbar:
             gene = msa_file.split("_msa.fasta")[0]
             pbar.set_description(f"processing {gene}")
             msa_path = options['outdir_msa'] + "/" + msa_file
             self.process_msa(gene, msa_path, ref_seq, options["precompute_graphics"], options["override"])
-
-        # if os.path.isdir(input_msa):
-        #     expected_files = set(
-        #         [x.accession + ".faa" for x in Bioentry.objects.filter(biodatabase__name="COVID19_prots")])
-        #     files = set(os.listdir(input_msa)) & expected_files
-        #     if len(files) == 0:
-        #         raise CommandError(f'in {input_msa} cannot find any of the following files {" ".join(expected_files)}')
-        #     pbar = tqdm(files, file=self.stderr)
-        #     for msa_file in pbar:
-        #         gene = msa_file.split(".faa")[0]
-        #         pbar.set_description(f"processing {gene}")
-        #         ref_seq = options["reference"] if options["reference"] else gene
-        #         self.process_msa(gene, input_msa + "/" + msa_file, ref_seq, options["precompute_graphics"])
-        # else:
-        #     if not options["accession"]:
-        #         raise CommandError(f'if input_msa is a file the gene accession cant be empty ')
-        #     if not Bioentry.objects.filter(accession=options["accession"]).exists():
-        #         raise CommandError(f'{options["accession"]} is not a valid orf')
-        #     ref_seq = options["reference"] if options["reference"] else options["accession"]
-        #     self.process_msa(options["accession"], input_msa, ref_seq, options["precompute_graphics"])
 
         self.stderr.write("Finished!")
 
@@ -146,15 +151,15 @@ class Command(BaseCommand):
 
                 try:
                     rid = r.id.replace("hCoV-19/", "")
-                    if "PAIS" in rid:
-                        code = rid.split("/")[1]
-                        gisaid = ""
-                        sdate = datetime.strptime("2020", '%Y').date()
-                        country = "Argentina"
-                    else:
-                        code, gisaid, sdate = rid.split("|")
-                        country = country_from_gisaid(r.id)
-                        sdate = datetime.strptime(sdate.split("_")[0], '%Y-%m-%d').date()
+                    # if "PAIS" in rid:
+                    #     code = rid.split("/")[1]
+                    #     gisaid = ""
+                    #     sdate = datetime.strptime("2020-6", '%Y-%m').date()
+                    #     country = "Argentina"
+                    # else:
+                    code, gisaid, sdate = rid.split("|")
+                    country = country_from_gisaid(r.id)
+                    sdate = datetime.strptime(sdate.split("_")[0], '%Y-%m-%d').date()
                 except Exception:
                     traceback.print_exc(file=self.stderr)
                     err = f'{r.id} does not have the correct format. Ex: hCoV-19/Wuhan/WIV04/2019|EPI_ISL_402124|2019-12-30'
@@ -170,7 +175,8 @@ class Command(BaseCommand):
         be = Bioentry.objects.get(accession=gene)
         seq = be.seq.seq
         Variant.objects.filter(bioentry=be).delete()
-        for ref_pos, variant_samples in tqdm(msa.variants(ref_seq).items(), file=self.stderr):
+        # pbar = tqdm(msa.variants(ref_seq).items(), file=self.stderr)
+        for ref_pos, variant_samples in msa.variants(ref_seq).items():
             ref, pos = ref_pos.split("_")
             pos = int(pos)
             if ref != "*":
@@ -199,3 +205,4 @@ class Command(BaseCommand):
                 fig_path = f'{STATICFILES_DIRS[0]}/auto/posfigs/{gene}{variant_pos}.png'
                 if override or (not os.path.exists(fig_path)) or (os.path.getsize(fig_path) < 100):
                     variant_graphics(ref_seq, variant_pos, fig_path, msa_file, msa)
+
