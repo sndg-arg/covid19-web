@@ -57,8 +57,8 @@ class VariantView(TemplateView):
         return context
 
 
-# LoginRequiredMixin,
-class InmunovaView(TemplateView):
+# ,
+class InmunovaView(LoginRequiredMixin,TemplateView):
     # PermissionRequiredMixin permission_required = 'polls.add_choice'
     # login_url = '/login/'
     # redirect_field_name = 'redirect_to'
