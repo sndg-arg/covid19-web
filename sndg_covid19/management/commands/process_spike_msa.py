@@ -70,7 +70,7 @@ class Command(BaseCommand):
                     traceback.print_exc(file=self.stderr)
                     err = f'{r.id} does not have the correct format. Ex: hCoV-19/Wuhan/WIV04/2019|EPI_ISL_402124|2019-12-30'
                     raise CommandError(err)
-                r.id = code.split("/")[-1]
+                r.id = code.split("/")[-2]
                 sample = Sample.objects.get_or_create(name=r.id, date=sdate, gisaid=gisaid, country=country)[0]
                 assert desc
                 sample.subdivision = desc.strip()
