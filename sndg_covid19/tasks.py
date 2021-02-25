@@ -19,7 +19,7 @@ from math import ceil
 from sndg_covid19.views import latam_countries
 from bioseq.bioio.MSAMap import MSAMap
 
-fechas = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio","Agosto","Septiembre"]
+fechas = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
 
 from sndg_covid19.bioio import country_from_gisaid
 import numpy as np
@@ -32,7 +32,7 @@ def autolabel(ax, y):
 
 
 @celery_app.task()
-def variant_graphics(gene: str, pos: int,fig_path,msa_file, msamap=None):
+def variant_graphics(gene: str, pos: int,fig_path,msa_file, msamap=None,idx_date=-2):
     """
     mafft --keeplength --mapout --addfull orf1ab.faa sndg_covid19/static/rawORFs/orf1ab_prot.fasta  > sndg_covid19/static/ORFs/orf1ab_prot.fasta
     orf1ab -> merge of orf1a and orf1b
@@ -55,7 +55,7 @@ def variant_graphics(gene: str, pos: int,fig_path,msa_file, msamap=None):
         if k == gene:
             continue
 
-        sample_date = datetime.datetime.strptime(k.split("|")[-1].split("_")[0], '%Y-%m-%d').date()
+        sample_date = datetime.datetime.strptime(k.split("|")[idx_date], '%Y-%m-%d').date()
         month = sample_date.month
         country = country_from_gisaid(k)
 

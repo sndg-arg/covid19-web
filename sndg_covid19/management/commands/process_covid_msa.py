@@ -38,7 +38,7 @@ class Command(BaseCommand):
         parser.add_argument("--override", help="override msa and graphics. Default: False", action="store_true")
         parser.add_argument("--remove", help="when override is ON, samples with this filter are deleted", default=None)
 
-    def create_aa_msa(self, genomic_msa, ref="MN908947.3", aa_msa_dir="data/processed/", override=False):
+    def create_aa_msa(self, genomic_msa,descriptions=None, ref="MN908947.3", aa_msa_dir="data/processed/", override=False):
         covid = Bioentry.objects.get(biodatabase__name="COVID19")  # genome bioentry
         msas = []
         qs = covid.features.filter(type_term__identifier__in=["CDS", "mat_peptide"])
@@ -49,7 +49,7 @@ class Command(BaseCommand):
             if override or (not os.path.exists(msa_file)) or (os.path.getsize(msa_file) < 100):
                 with open(msa_file, "w") as h:
                     # pbar = tqdm(genomic_msa.samples(), file=self.stderr)
-                    for sample in genomic_msa.samples():
+                    for sample in sorted(genomic_msa.samples(),key=lambda x:0 if x == ref else 1):
                         ok = True
                         if sample != ref:
 
@@ -81,7 +81,8 @@ class Command(BaseCommand):
                             refseq = seq
 
                         if ok:
-                            record = SeqRecord(id=sample, name="", description="", seq=seq)
+                            desc = descriptions.get(sample,"").strip()
+                            record = SeqRecord(id=sample, name="", description=desc, seq=seq)
                             bpio.write(record, h, "fasta")
                         else:
                             self.stderr.write(f'Invalid sequence "{gene}" for sample "{sample}"')
@@ -101,26 +102,23 @@ class Command(BaseCommand):
         if options["remove"]:
             sample_filter = json.loads(options["remove"])
 
-
-
-        msa = MSAMap(bpio.to_dict(bpio.parse(input_msa, "fasta")))
+        seqs = bpio.to_dict(bpio.parse(input_msa, "fasta"))
+        descriptions = {x.id:x.description.split(x.id)[1] for x in seqs.values()}
+        msa = MSAMap(seqs)
         self.stderr.write("Initializing MSA...\n")
         msa.init(tqdm)
-        if options["override"]:
-            self.stderr.write("deleting current samples")
-            if sample_filter:
-                print(sample_filter)
+
+
+        if sample_filter:
                 qs = Sample.objects.filter(**sample_filter)
                 count = qs.count()
                 if count:
                     qs.delete()
                     self.stderr.write(f"deleted: {count}")
-            else:
-                self.stderr.write(Sample.objects.all().delete())
-            self.stderr.write("\n")
+
 
         self.stderr.write("AA Processing\n")
-        self.create_aa_msa(msa, ref=ref_seq, aa_msa_dir=options['outdir_msa'], override=options["override"])
+        self.create_aa_msa(msa,descriptions=descriptions, ref=ref_seq, aa_msa_dir=options['outdir_msa'], override=options["override"])
 
         expected_files = set(
             [x.accession + "_msa.fasta" for x in Bioentry.objects.filter(biodatabase__name="COVID19_prots")])
@@ -145,27 +143,23 @@ class Command(BaseCommand):
         msa_map = {}
         for r in bpio.parse(msa_file, "fasta"):
             r.name = ""
-            r.description = ""
+            desc = ("" if len(r.description.split(r.id)) == 1 else r.description.split(r.id)[1]).strip()
             # hCoV-19/Wuhan/WIV04/2019|EPI_ISL_402124|2019-12-30
             if r.id != ref_seq:
-
                 try:
                     rid = r.id.replace("hCoV-19/", "")
-                    # if "PAIS" in rid:
-                    #     code = rid.split("/")[1]
-                    #     gisaid = ""
-                    #     sdate = datetime.strptime("2020-6", '%Y-%m').date()
-                    #     country = "Argentina"
-                    # else:
-                    code, gisaid, sdate = rid.split("|")
+                    code, gisaid, sdate = rid.split("|")[:3]
                     country = country_from_gisaid(r.id)
                     sdate = datetime.strptime(sdate.split("_")[0], '%Y-%m-%d').date()
                 except Exception:
                     traceback.print_exc(file=self.stderr)
                     err = f'{r.id} does not have the correct format. Ex: hCoV-19/Wuhan/WIV04/2019|EPI_ISL_402124|2019-12-30'
                     raise CommandError(err)
-                r.id = code
-                Sample.objects.get_or_create(name=r.id, date=sdate, gisaid=gisaid, country=country)
+                r.id = code.split("/")[-2]
+                sample = Sample.objects.get_or_create(name=r.id, date=sdate, gisaid=gisaid, country=country)[0]
+                assert desc
+                sample.subdivision = desc
+                sample.save()
             msa_map[r.id] = r
         if ref_seq not in msa_map:
             raise CommandError(f'{gene} not in {msa_file}')
@@ -174,7 +168,7 @@ class Command(BaseCommand):
         msa.init()
         be = Bioentry.objects.get(accession=gene)
         seq = be.seq.seq
-        Variant.objects.filter(bioentry=be).delete()
+
         # pbar = tqdm(msa.variants(ref_seq).items(), file=self.stderr)
         for ref_pos, variant_samples in msa.variants(ref_seq).items():
             ref, pos = ref_pos.split("_")
@@ -194,6 +188,7 @@ class Command(BaseCommand):
             for alt, samples in variant_samples.items():
                 if (alt != ref) and (alt != "X"):
                     for sample_name in samples:
+                        SampleVariant.objects.filter(sample__name=sample_name, variant__pos=pos).delete()
                         variant = Variant.objects.get_or_create(bioentry=be, pos=pos, ref=ref)[0]
                         sample = Sample.objects.get(name=sample_name)
                         SampleVariant.objects.get_or_create(variant=variant, alt=alt, sample=sample)

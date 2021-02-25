@@ -52,7 +52,7 @@ RUN wget -O /app/snpEff_latest_core.zip http://sourceforge.net/projects/snpeff/f
 RUN apt install -y seqtk
 RUN apt install -y mafft
 RUN apt install -y snp-sites
-
+<
 RUN wget -O /app/gatk.zip "https://github.com/broadinstitute/gatk/releases/download/4.1.8.0/gatk-4.1.8.0.zip" && \
     cd /app && unzip gatk.zip && rm /app/gatk.zip && mv /app/gatk-4.1.8.0 /app/gatk
 

@@ -24,6 +24,7 @@ class Variant(models.Model):
 class Sample(models.Model):
     name = models.CharField(max_length=255)
     country = models.CharField(max_length=255)
+    subdivision = models.CharField(max_length=255)
     gisaid = models.CharField(max_length=255)
     date = models.DateField()
 

@@ -15,7 +15,16 @@
 
   <h3 id="variants">Variantes</h3>
 
-
+  <form>
+  Lugares:
+  <select name="subdivision">
+    <option value="">todos</option>
+    {%  for subdivision in subdivisions %}
+      <option {% if selectedSub == subdivision %} selected="selected" {% endif %}  value="{{ subdivision }}">{{ subdivision }}</option>
+    {% endfor %}
+  </select>
+  <input type="submit" value="Filtrar" />
+  </form>
   <div id="variants_output" style="margin: 30px;">
     <table class="table table-condensed table-responsive">
       <tr><th>Pos</th><th>Ref</th><th>Alt</th>

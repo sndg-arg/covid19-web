@@ -12,7 +12,7 @@ from django.views.generic import TemplateView
 from bioseq.models.Bioentry import Bioentry
 from config.settings.base import STATICFILES_DIRS
 from ..tasks import variant_graphics
-from bioseq.models.Variant import Variant,Sample
+from bioseq.models.Variant import Variant, Sample,SampleVariant
 from bioseq.models.PDBVariant import PDBVariant
 from itertools import groupby
 import pandas as pd
@@ -20,6 +20,7 @@ import numpy as np
 from datetime import date
 from dateutil.relativedelta import relativedelta
 from . import latam_countries
+
 
 class VariantView(TemplateView):
     # PermissionRequiredMixin permission_required = 'polls.add_choice'
@@ -55,7 +56,9 @@ class VariantView(TemplateView):
 
         return context
 
-class InmunovaView(LoginRequiredMixin,TemplateView):
+
+# LoginRequiredMixin,
+class InmunovaView(TemplateView):
     # PermissionRequiredMixin permission_required = 'polls.add_choice'
     # login_url = '/login/'
     # redirect_field_name = 'redirect_to'
@@ -70,14 +73,18 @@ class InmunovaView(LoginRequiredMixin,TemplateView):
                                 "features__locations", "features__source_term",  # "dbxrefs__dbxref",
                                 "features__type_term__ontology", "features__qualifiers__term"))
         be = be.get(accession="S")
-
-        vars,month_counts= variants(be,"Argentina")
+        subdivision = self.request.GET.get("subdivision","")
+        vars, month_counts = variants(be, "Argentina",subdivision)
         context["variants"] = vars
         context["month_counts"] = month_counts
         context["object"] = be
-        context["year_months"] = sorted([year * 100 + month for year,month in get_last_months(date.today(), 11)])
-        from bioseq.templatetags.bioresources_extras import  getattribute
+        context["year_months"] = sorted([year * 100 + month for year, month in get_last_months(date.today(), 11)])
+        context["subdivisions"] = [x["subdivision"] for x in Sample.objects.values("subdivision").distinct()]
+        context["object"] = be
+        context["selectedSub"] = subdivision
+        from bioseq.templatetags.bioresources_extras import getattribute
         return context
+
 
 def pdb_variants_download(request):
     response = HttpResponse(content_type='text/json')
@@ -100,12 +107,13 @@ def pdb_variants_download(request):
     fields = {"variant__pos": "pos", "variant__sample_variants__alt": "alt",
               "residue__pdb__code": "pdb", "variant__bioentry__accession": "gene",
               "variant__sample_variants__sample__country": "country",
-              "variant__sample_variants__sample__name":"sample_name"
+              "variant__sample_variants__sample__name": "sample_name"
               }
     country = [{v: x[k] for k, v in fields.items()} for x in
                PDBVariant.objects.filter(**qs).values(*fields.keys()).order_by("variant__bioentry__accession",
                                                                                "-variant__pos")]
-    country2 = {gene: {pos: [{"country": country, "alt": alt, "count": len(set(xx["sample_name"] for xx in alts)) } for (country, alt), alts in
+    country2 = {gene: {pos: [{"country": country, "alt": alt, "count": len(set(xx["sample_name"] for xx in alts))} for
+                             (country, alt), alts in
                              groupby(sorted(countries, key=lambda x: (x["country"], x["alt"])),
                                      lambda x: (x["country"], x["alt"]))]
                        for pos, countries in groupby(sorted(g2, key=lambda x: x["pos"]), lambda x: x["pos"])}
@@ -125,49 +133,59 @@ def pdb_variants_download(request):
     return response
 
 
-def variants(be,filter_by_country=None):
+def variants(be, filter_by_country=None,filter_by_subdivision=None):
     data = []
     if filter_by_country:
-        vs = list(Variant.objects.values("ref", "sample_variants__alt", "pos", "variant_id",
-                                         "sample_variants__sample__country", "bioentry_id",
-                                         "sample_variants__sample__name",
-                                         "sample_variants__sample__date").filter(bioentry=be,
-                                                            sample_variants__sample__country=filter_by_country))
+        vs = list(SampleVariant.objects.values("variant__ref", "alt", "variant__pos", "variant__variant_id",
+                                               "sample__country", "variant__bioentry_id",
+                                               "sample__name",
+                                               "sample__date").filter(
+            variant__bioentry=be, sample__country=filter_by_country).distinct())
+        if filter_by_subdivision:
+            vs = list(SampleVariant.objects.values("variant__ref", "alt", "variant__pos", "variant__variant_id",
+                                             "sample__country", "variant__bioentry_id",
+                                             "sample__name",
+                                             "sample__date").filter(
+                variant__bioentry=be, sample__subdivision=filter_by_subdivision,
+                sample__country=filter_by_country).distinct())
     else:
-        vs = list(Variant.objects.values("ref", "sample_variants__alt", "pos", "variant_id",
-                                "sample_variants__sample__country", "bioentry_id",
-                                "sample_variants__sample__name",
-                                     "sample_variants__sample__date").filter(bioentry=be))
+        vs = list(SampleVariant.objects.values("variant__ref", "alt", "variant__pos", "variant__variant_id",
+                                               "sample__country", "variant__bioentry_id",
+                                               "sample__name",
+                                               "sample__date").filter(variant__bioentry=be))
 
     variant_ids = []
     for sample_variant in vs:
         # if ((sample_variant["ref"] != "X")
-            # and            (sample_variant["sample_variants__sample__country"] == "Argentina")):
-        if (sample_variant["ref"] != "X") :
+        # and            (sample_variant["sample_variants__sample__country"] == "Argentina")):
+        if (sample_variant["variant__ref"] != "X"):
             # key = "_".join([ str(pdb_var["pos"]), pdb_var["ref"]])
-            variant_ids.append(sample_variant["variant_id"])
+            variant_ids.append(sample_variant["variant__variant_id"])
 
-            record = {"ref": sample_variant["ref"], "pos": sample_variant["pos"] + 1,
-                      "alt": sample_variant["sample_variants__alt"],
+            record = {"ref": sample_variant["variant__ref"], "pos": sample_variant["variant__pos"] + 1,
+                      "alt": sample_variant["alt"],
                       "count": 1.0,
-                      "date": sample_variant['sample_variants__sample__date'].year * 100 +
-                              sample_variant['sample_variants__sample__date'].month,
-                      "cod": sample_variant["sample_variants__sample__name"]}
-            if  317 < record["pos"] < 542:
+                      "date": sample_variant['sample__date'].year * 100 +
+                              sample_variant['sample__date'].month,
+                      "cod": sample_variant["sample__name"]}
+            if 317 < record["pos"] < 542:
                 data.append(record)
     df_raw = pd.DataFrame(data)
     if len(df_raw):
-        df = df_raw.pivot_table(index=["pos", "ref", "alt"],columns=["date"],  values="count",
-                            aggfunc=np.sum).fillna(0).astype(int).sort_values(
+        df = df_raw.pivot_table(index=["pos", "ref", "alt"], columns=["date"], values="count",
+                                aggfunc=np.sum).fillna(0).astype(int).sort_values(
             ["pos", "ref", "alt"])
     else:
         df = pd.DataFrame()
 
     month_counts = {}
-    for year,month in get_last_months(date.today(), 12):
-        month_counts [year * 100 + month] = Sample.objects.filter(date__year=year,date__month=month, country="Argentina" ).count()
-
-
+    for year, month in get_last_months(date.today(), 12):
+        if filter_by_subdivision:
+            month_counts[year * 100 + month] = Sample.objects.filter(date__year=year, date__month=month,
+                                                    country="Argentina",subdivision=filter_by_subdivision).count()
+        else:
+            month_counts[year * 100 + month] = Sample.objects.filter(date__year=year, date__month=month,
+                                                                     country="Argentina").count()
 
     fields = {"variant__pos": "pos", "variant__ref": "ref",
               # "residue__chain": "chain", "residue__resid": "resid",
@@ -207,15 +225,17 @@ def variants(be,filter_by_country=None):
             key = "_".join([str(r["pos"]), r["ref"]])
             v = r.to_dict()
             v["struct"] = pdb_vars_dict.get(key, "")
-            for year_month,sample_count in month_counts.items():
+            for year_month, sample_count in month_counts.items():
                 if year_month in v:
-                    v[str(year_month) + "_total"] = sample_count  #f'{sample_count/total_month}({sample_count}/{total_month})'
+                    v[str(
+                        year_month) + "_total"] = sample_count  # f'{sample_count/total_month}({sample_count}/{total_month})'
 
             variants.append(v)
 
-    return variants,month_counts
+    return variants, month_counts
+
 
 def get_last_months(start_date, months):
     for i in range(months):
-        yield (start_date.year,start_date.month)
-        start_date += relativedelta(months = -1)
+        yield (start_date.year, start_date.month)
+        start_date += relativedelta(months=-1)
