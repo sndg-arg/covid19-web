@@ -149,8 +149,8 @@ class CovidIO:
             for x in error_csv_geo:
                 errores_detallados.append(f"error_csv_geo: {x}")
 
-        if errores_detallados:
-            result["errores_detallados"] = errores_detallados
+
+        result["errores_detallados"] = errores_detallados
 
         diff = set(ids_validos) - set(csv_valid_cod)
         if diff:
