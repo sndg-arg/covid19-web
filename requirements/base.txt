@@ -21,3 +21,4 @@ tqdm
 xmltodict
 sndg-bio
 matplotlib
+django_tables2

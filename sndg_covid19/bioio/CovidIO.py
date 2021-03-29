@@ -95,6 +95,8 @@ class CovidIO:
             result["errors"].append("no todas las secuencias son del mismo largo")
         error_ids = []
         ids_validos = []
+        if ref_name not in seqs:
+            result["errors"].append(f"la referencia {ref_name} no esta en el alineamiento")
         for seq in seqs.values():
             if re.match("^PAIS-S-[A-Z]\d{4}$", seq.id):
                 ids_validos.append(seq.id)
