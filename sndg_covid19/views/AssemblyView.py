@@ -66,10 +66,11 @@ def variants_table():
 
 
     df["En PDB"] = con_struct
-    df.columns.name = "País"
+    df.columns.name = ""
     df.index.names = ["Gen", "Pos", "Ref", "Alt"]
-    html = df.to_html(table_id="variants_table",
-                      classes="table table-responsive", escape=False)
+    # df["Pos"] = [f'<a href=".">{x}</a>' for x in df["Pos"]]
+    html = df.reset_index().to_html(table_id="variants_table",
+                      classes="table table-responsive", escape=False,index=False)
     return html
 
 

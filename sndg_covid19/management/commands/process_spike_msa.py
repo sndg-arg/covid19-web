@@ -71,6 +71,7 @@ class Command(BaseCommand):
                     err = f'{r.id} does not have the correct format. Ex: hCoV-19/Wuhan/WIV04/2019|EPI_ISL_402124|2019-12-30'
                     raise CommandError(err)
                 r.id = code.split("/")[-2]
+                Sample.objects.filter(name=r.id).delete()
                 sample = Sample.objects.get_or_create(name=r.id, date=sdate, gisaid=gisaid, country=country)[0]
                 assert desc
                 sample.subdivision = desc.strip()
@@ -85,7 +86,7 @@ class Command(BaseCommand):
         seq = be.seq.seq
 
         # pbar = tqdm(msa.variants(ref_seq).items(), file=self.stderr)
-        for ref_pos, variant_samples in msa.variants(ref_seq).items():
+        for ref_pos, variant_samples in tqdm(msa.variants(ref_seq).items()):
             ref, pos = ref_pos.split("_")
             pos = int(pos)
             if ref != "*":

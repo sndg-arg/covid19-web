@@ -383,5 +383,6 @@ data/sndgr/*
 data/jbrowse/*
 
 .pytest_cache/
-
+uploads/
+processed/
 

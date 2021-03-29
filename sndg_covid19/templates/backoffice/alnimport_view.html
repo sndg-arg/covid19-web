@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% load static %}
+{% load i18n %}
+{% load bioresources_extras %}
+{% load crispy_forms_tags %}
+{% load render_table from django_tables2 %}
+
+{% load static %}
+
+{% block headmeta %}
+  {% if in_progress %}
+    <meta http-equiv="refresh" content="{{ refresh_delay }};url=."/>
+  {% endif %}
+{% endblock %}
+
+{% block javascripts %}
+
+
+{% endblock %}
+
+{% block content %}
+
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"/>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css">
+
+
+
+  <form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form | crispy }}
+    <input type="submit"/>
+  </form>
+  <h3>{% trans "Aln Jobs" %}</h3>
+  {% render_table jobs_table %}
+
+
+
+{% endblock %}
+
+<script>
+
+</script>

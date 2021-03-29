@@ -85,7 +85,7 @@ mkdir data/pdb
 ./manage.py process_covid_msa -i data/curated/test.fasta --override
 ```
 
-* Cross variants with PDB residues and remove obsolete
+* Cross variants with PDB residues and remove obsolete**
  ./manage.py update_covid_pdb
 
 * Start server

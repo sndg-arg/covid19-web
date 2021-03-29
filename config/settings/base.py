@@ -81,7 +81,8 @@ THIRD_PARTY_APPS = [
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
-    "django_celery_beat"
+    "django_celery_beat",
+    'django_tables2'
 ]
 
 LOCAL_APPS = [
@@ -289,6 +290,13 @@ CELERY_TASK_TIME_LIMIT = 5 * 60
 CELERY_TASK_SOFT_TIME_LIMIT = 60
 # http://docs.celeryproject.org/en/latest/userguide/configuration.html#beat-scheduler
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
+
+# http://docs.celeryproject.org/en/latest/userguide/configuration.html#task-always-eager
+# Calls delay synchronously if true
+CELERY_TASK_ALWAYS_EAGER = env.bool("CELERY_TASK_ALWAYS_EAGER",True)
+# http://docs.celeryproject.org/en/latest/userguide/configuration.html#task-eager-propagates
+CELERY_TASK_EAGER_PROPAGATES = env.bool("CELERY_TASK_EAGER_PROPAGATES",True)
+
 # django-allauth
 # ------------------------------------------------------------------------------
 ACCOUNT_ALLOW_REGISTRATION = env.bool("DJANGO_ACCOUNT_ALLOW_REGISTRATION", True)
@@ -309,6 +317,6 @@ SNDG_JBROWSE = os.path.join(str(ROOT_DIR), env('SNDG_JBROWSE', default="data/jbr
 STATICFILES_DIRS = STATICFILES_DIRS + [("jbrowse", SNDG_JBROWSE), ]
 
 SECURE_CONTENT_TYPE_NOSNIFF = False
-SESSION_COOKIE_SECURE = True
-SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+UPLOAD_ROOT = ROOT_DIR / "uploads"

@@ -6,49 +6,85 @@
 {% load static %}
 
 
-{% block javascripts%}
+{% block javascript %}
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0/dist/Chart.min.js"></script>
+  <link ref="stylesheet" ref="https://cdn.jsdelivr.net/npm/chart.js@2.8.0/dist/Chart.min.css"/>
 
+  <script src="https://www.chartjs.org/samples/latest/utils.js"></script>
+
+  <script>
+
+    window.onload = function () {
+      $.get('{% url 'covid:pos_stats_data' gene_id pos %}', (data) => {
+        var ctx = document.getElementById('canvas').getContext('2d');
+        window.myBar = new Chart(ctx, {
+          type: 'bar',
+          data: data,
+          options: {
+            title: {
+              display: true,
+              text: 'Proporción de los alelos alternativos en los aislamientos por país (acumulativo)'
+            },
+            tooltips: {
+              mode: 'index',
+              intersect: false
+            },
+            responsive: true,
+            scales: {
+              xAxes: [{
+                stacked: true,
+              }],
+              yAxes: [{
+                stacked: true
+              }]
+            }
+          }
+        });
+      });
+    }
+  </script>
 {% endblock %}
 
 {% block content %}
 
-<h1>Posición Variante </h1>
-<div class="row">
-  <div class="col-md-12">
-    <table class="table table-bordered">
-      <tr>
-        <td>Gen</td>
-        <td><a href="{% url 'covid:gene_view' gene_id%}">{{gene|upper}}
-          {{gene_desc}}</a></td>
-      </tr>
-      <tr>
-        <td>Ref</td>
-        <td>{{pos}}{{ref}}</td>
-      </tr>
-      {% if residues %}
-      <tr>
-        <td colspan="2">Con estructura:<br />
-        {% for pdb,pdb_res in residues %}
-          {{pdb}}:
-          {% for residue in pdb_res %}
-             <a href="{% url 'covid:structure_view' gene_id pdb    %}?highlight=:{{residue.chain}} and {{residue.resid}}{% if residue.layers %}&layers={{residue.layers|join:','}}{% endif %}" >
-               {{residue.pdb.code}}  {{residue.chain}}  {{residue.resid}}{{residue.icode}}
-             </a> {% if residue.ann %} ( {{residue.ann |join:" - "}}) {% endif %}
-          {% endfor %}
-          <br />
-          {% endfor %}
-        </td>
-      </tr>
-      {% endif %}
-    </table>
+  <h1>Posición Variante </h1>
+  <div class="row">
+    <div class="col-md-12">
+      <table class="table table-bordered">
+        <tr>
+          <td>Gen</td>
+          <td><a href="{% url 'covid:gene_view' gene_id %}">{{ gene|upper }}
+            {{ gene_desc }}</a></td>
+        </tr>
+        <tr>
+          <td>Ref</td>
+          <td>{{ pos }}{{ ref }}</td>
+        </tr>
+        {% if residues %}
+          <tr>
+            <td colspan="2">Con estructura:<br/>
+              {% for pdb,pdb_res in residues %}
+                {{ pdb }}:
+                {% for residue in pdb_res %}
+                  <a href="{% url 'covid:structure_view' gene_id pdb %}?highlight=:{{ residue.chain }} and
+                          {{ residue.resid }}{% if residue.layers %}&layers={{ residue.layers|join:','}}{% endif %}">
+                    {{ residue.pdb.code }} {{ residue.chain }} {{ residue.resid }}{{ residue.icode }}
+                  </a> {% if residue.ann %} ( {{ residue.ann |join:" - "}}) {% endif %}
+                {% endfor %}
+                <br/>
+              {% endfor %}
+            </td>
+          </tr>
+        {% endif %}
+      </table>
+    </div>
   </div>
-</div>
-<p> Proporción de los alelos alternativos en los aislamientos por país (acumulativo)</p>
 
-{% if fig_avail %}
-<img src="{% static '' %}auto/posfigs/{{gene}}{{pos|add:-1}}.png"/>
-{% else %}
-<p>Figura no disponible</p>
-{% endif %}
+
+  <div style="width: 75%">
+    <canvas id="canvas"></canvas>
+  </div>
+
+
 {% endblock %}

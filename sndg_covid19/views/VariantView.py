@@ -12,7 +12,7 @@ from django.views.generic import TemplateView
 from bioseq.models.Bioentry import Bioentry
 from config.settings.base import STATICFILES_DIRS
 from ..tasks import variant_graphics
-from bioseq.models.Variant import Variant, Sample,SampleVariant
+from bioseq.models.Variant import Variant, Sample, SampleVariant
 from bioseq.models.PDBVariant import PDBVariant
 from itertools import groupby
 import pandas as pd
@@ -20,6 +20,7 @@ import numpy as np
 from datetime import date
 from dateutil.relativedelta import relativedelta
 from . import latam_countries
+from django.http import JsonResponse
 
 
 class VariantView(TemplateView):
@@ -52,13 +53,55 @@ class VariantView(TemplateView):
 
         context["residues"] = [(x, list(y)) for x, y in
                                groupby(sorted(context["residues"], key=lambda x: x.pdb.code), lambda x: x.pdb.code)]
-        context["fig_avail"] = os.path.exists(f'{STATICFILES_DIRS[0]}/auto/posfigs/{gene}{pos}.png')
+
 
         return context
 
 
-# ,
-class InmunovaView(LoginRequiredMixin,TemplateView):
+def variant_data(request, gene, pos):
+    vs = list(SampleVariant.objects.values("variant__ref", "alt", "variant__pos", "variant__variant_id",
+                                           "sample__country", "variant__bioentry_id",
+                                           "sample__name",
+                                           "sample__date").filter(
+        variant__bioentry__bioentry_id=gene, sample__country="Argentina", variant__pos=pos-1).order_by("sample__date").distinct())
+    vsa = [s for s in Sample.objects.filter(country="Argentina").order_by("date")]
+    samples_by_month = {k:list(v) for k,v in groupby(vsa, key=lambda x: f'{x.date.year}_{x.date.month}' )}
+    samples_by_month = defaultdict(list,samples_by_month)
+    last_12 = [f'{x[0]}_{x[1]}' for x in  get_last_months(date.today(), 16)]
+    last_12.reverse()
+    ref = vs[0]["variant__ref" ]
+    alts = set([x["alt"] for x in vs])
+    colors = ["red", "green", "yellow", "blue", ]
+    variants_by_month = {k:list(v) for k,v in groupby(vs, key=lambda x: f'{x["sample__date"].year}_{x["sample__date"].month}' )}
+    variants_by_month = defaultdict(list,variants_by_month)
+    datasets = []
+    for i, alt in enumerate(alts):
+        dataset = {
+            "label": alt,
+            "backgroundColor": colors[i],
+            "data": [len([x for x in variants_by_month[sdate] if x["alt"] == alt])
+                     for sdate in last_12]
+
+        }
+        datasets.append(dataset)
+    ref_dataset = {
+        "label": ref,
+        "backgroundColor": colors[i+1],
+        "data": [  len(samples_by_month[sdate]) - sum([d["data"][i] for d in datasets ])
+                   for i,sdate in enumerate(last_12)]
+    }
+    datasets.append(ref_dataset)
+
+
+    data = {
+        "labels": last_12,
+        "datasets": datasets
+
+    };
+    return JsonResponse(data)
+
+
+class InmunovaView(LoginRequiredMixin, TemplateView):
     # PermissionRequiredMixin permission_required = 'polls.add_choice'
     # login_url = '/login/'
     # redirect_field_name = 'redirect_to'
@@ -73,8 +116,8 @@ class InmunovaView(LoginRequiredMixin,TemplateView):
                                 "features__locations", "features__source_term",  # "dbxrefs__dbxref",
                                 "features__type_term__ontology", "features__qualifiers__term"))
         be = be.get(accession="S")
-        subdivision = self.request.GET.get("subdivision","")
-        vars, month_counts = variants(be, "Argentina",subdivision)
+        subdivision = self.request.GET.get("subdivision", "")
+        vars, month_counts = variants(be, "Argentina", subdivision)
         context["variants"] = vars
         context["month_counts"] = month_counts
         context["object"] = be
@@ -133,7 +176,7 @@ def pdb_variants_download(request):
     return response
 
 
-def variants(be, filter_by_country=None,filter_by_subdivision=None):
+def variants(be, filter_by_country=None, filter_by_subdivision=None):
     data = []
     if filter_by_country:
         vs = list(SampleVariant.objects.values("variant__ref", "alt", "variant__pos", "variant__variant_id",
@@ -143,9 +186,9 @@ def variants(be, filter_by_country=None,filter_by_subdivision=None):
             variant__bioentry=be, sample__country=filter_by_country).distinct())
         if filter_by_subdivision:
             vs = list(SampleVariant.objects.values("variant__ref", "alt", "variant__pos", "variant__variant_id",
-                                             "sample__country", "variant__bioentry_id",
-                                             "sample__name",
-                                             "sample__date").filter(
+                                                   "sample__country", "variant__bioentry_id",
+                                                   "sample__name",
+                                                   "sample__date").filter(
                 variant__bioentry=be, sample__subdivision=filter_by_subdivision,
                 sample__country=filter_by_country).distinct())
     else:
@@ -182,7 +225,8 @@ def variants(be, filter_by_country=None,filter_by_subdivision=None):
     for year, month in get_last_months(date.today(), 12):
         if filter_by_subdivision:
             month_counts[year * 100 + month] = Sample.objects.filter(date__year=year, date__month=month,
-                                                    country="Argentina",subdivision=filter_by_subdivision).count()
+                                                                     country="Argentina",
+                                                                     subdivision=filter_by_subdivision).count()
         else:
             month_counts[year * 100 + month] = Sample.objects.filter(date__year=year, date__month=month,
                                                                      country="Argentina").count()
