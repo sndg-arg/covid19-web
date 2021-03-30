@@ -59,11 +59,15 @@ class VariantView(TemplateView):
 
 
 def variant_data(request, gene, pos):
+
+
     vs = list(SampleVariant.objects.values("variant__ref", "alt", "variant__pos", "variant__variant_id",
                                            "sample__country", "variant__bioentry_id",
                                            "sample__name",
                                            "sample__date").filter(
+
         variant__bioentry__bioentry_id=gene, sample__country="Argentina", variant__pos=pos-1).order_by("sample__date").distinct())
+
     vsa = [s for s in Sample.objects.filter(country="Argentina").order_by("date")]
     samples_by_month = {k:list(v) for k,v in groupby(vsa, key=lambda x: f'{x.date.year}_{x.date.month}' )}
     samples_by_month = defaultdict(list,samples_by_month)
@@ -211,8 +215,9 @@ def variants(be, filter_by_country=None, filter_by_subdivision=None):
                       "date": sample_variant['sample__date'].year * 100 +
                               sample_variant['sample__date'].month,
                       "cod": sample_variant["sample__name"]}
-            if 317 < record["pos"] < 542:
-                data.append(record)
+            # Chequear si esta en el sitio RBD
+            # if 317 < record["pos"] < 542:
+            data.append(record)
     df_raw = pd.DataFrame(data)
     if len(df_raw):
         df = df_raw.pivot_table(index=["pos", "ref", "alt"], columns=["date"], values="count",

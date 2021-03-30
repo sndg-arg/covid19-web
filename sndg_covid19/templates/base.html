@@ -83,13 +83,19 @@
 <!--                {# URL provided by django-allauth/account/urls.py #}-->
 <!--                <a class="nav-link" href="{% url 'users:detail' request.user.username  %}">{% trans "My Profile" %}</a>-->
 <!--              </li>-->
+
+              <li class="nav-item active">
+                <a class="nav-link" href="{% url 'covid:aln_import' %}">{% trans "Importar alineamiento" %}</a>
+              </li>
+              <li class="nav-item active">
+                <a class="nav-link" href="{% url 'covid:spike_variants' %}">{% trans "Variantes Spike" %}</a>
+              </li>
               <li class="nav-item active">
                 {# URL provided by django-allauth/account/urls.py #}
                 <a class="nav-link" href="{% url 'account_logout' %}">{% trans "Sign Out" %}</a>
               </li>
             {% else %}
               <li class="nav-item active">
-                {# URL provided by django-allauth/account/urls.py #}
                 <a id="log-in-link" class="nav-link" href="{% url 'account_login' %}">{% trans "Sign In" %}</a>
               </li>
             {% endif %}

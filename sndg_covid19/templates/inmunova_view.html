@@ -13,7 +13,7 @@
 
 {% block content %}
 
-  <h3 id="variants">Variantes</h3>
+  <h3 id="variants">Variantes Spike</h3>
 
   <form>
   Lugares:
@@ -41,7 +41,9 @@
              {%  for year_month in year_months %}
                <td>
                {% if variant|getattribute:year_month %}
+                 <a href="{%  url 'covid:variant_samples' object.accession variant.pos %}?year_month={{ year_month  }}">
                 {{ variant|getattribute:year_month }}
+                 </a>
               {% else %}
                  0
                {% endif %} / {{ month_counts|getattribute:year_month|default_if_none:"?" }}

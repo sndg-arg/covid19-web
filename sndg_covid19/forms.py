@@ -16,6 +16,7 @@ class AlnImportTable(tables.Table):
 
     name = tables.Column()
     aln_type = tables.Column()
+    username = tables.Column(accessor="user.username")
     version = tables.Column(orderable=False)
     errors = tables.TemplateColumn(T2)
     status_desc = tables.Column(orderable=False)
@@ -25,8 +26,8 @@ class AlnImportTable(tables.Table):
         model = ImportJob
         template_name = "django_tables2/bootstrap.html"
 
-        fields = ("name", "aln_type","status","status_desc", "errors", "version", "created_at")
-        sequence = ("name", "aln_type","status","status_desc", "errors","version", "created_at")
+        fields = ("name", "aln_type","status","status_desc", "errors", "version","username", "created_at")
+        sequence = ("name", "aln_type","status","status_desc", "errors","version","username",  "created_at")
 
 
 class AlnImportForm(forms.ModelForm):

@@ -6,7 +6,7 @@ from .views.StructureView import StructureView,pdb_download,StructureStaticView
 from .views.ProjectStrainsView import ProjectStrainsView
 from .views.VariantView import VariantView,pdb_variants_download,InmunovaView,variant_data
 from .views.BackOffice.AlnImportView import AlnImportView
-
+from .views.SamplesFromVariantView import SamplesFromVariantView
 
 
 from django.views.generic import RedirectView
@@ -28,14 +28,16 @@ urlpatterns = [
 
     path('project/', ProjectStrainsView.as_view(), name='project_strains'),
     path('variant/<str:gene>/<int:pos>', VariantView.as_view(), name='pos_stats'),
-
+    path('variant/<str:gene>/<int:pos>/sample', SamplesFromVariantView.as_view(), name='variant_samples'),
     path('variant_data/<str:gene>/<int:pos>', variant_data, name='pos_stats_data'),
 
 
-
+    # TODO: link en el menu para S
+    # Ver muestras original
+    # Pagina de combinaciones
 
     path('variant/', pdb_variants_download, name='download_pdb_variants'),
-    path('variant/inmunova', InmunovaView.as_view(), name='inmunova'),
+    path('variant/spike', InmunovaView.as_view(), name='spike_variants'),
     path('backoffice/aln_import/', AlnImportView.as_view(), name='aln_import'),
 
 

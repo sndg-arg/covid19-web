@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% load static %}
+{% load i18n %}
+{% load bioresources_extras %}
+
+{% load static %}
+{% block content %}
+
+  <p>{% trans 'Gene' %} {{ gene }}</p>
+  <p>{% trans 'Pos' %} {{ pos }}</p>
+  <p>{% trans 'Date' %} {{ year_month }}</p>
+
+  <table class="table table-condensed table-responsive">
+    <thead>
+    <tr>
+      <th>{% trans 'Sample' %}</th>
+      <th>{% trans 'Subdivision' %}</th>
+      <th>{% trans 'Alt AA' %}</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for s in samples %}
+    <tr>
+      <td>{{ s.name  }}</td>
+      <td>{{ s.subdivision  }}</td>
+      <td>{{ s.alt  }}</td>
+    </tr>
+    {%  endfor %}
+    </tbody>
+  </table>
+
+{% endblock %}
