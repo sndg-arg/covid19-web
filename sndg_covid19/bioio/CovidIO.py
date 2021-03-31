@@ -89,6 +89,7 @@ class CovidIO:
     def validate_import_spike(seqs, csv, ref_name):
         result = {"errors": [], "data": {}}
         errores_detallados = []
+        result["errores_detallados"] = errores_detallados
         if not len(seqs):
             result["errors"].append("no se detecto niguna secuencia en el fasta")
         if len(set([len(seq) for seq in seqs.values()])) != 1:
@@ -150,7 +151,7 @@ class CovidIO:
                 errores_detallados.append(f"error_csv_geo: {x}")
 
 
-        result["errores_detallados"] = errores_detallados
+
 
         diff = set(ids_validos) - set(csv_valid_cod)
         if diff:
