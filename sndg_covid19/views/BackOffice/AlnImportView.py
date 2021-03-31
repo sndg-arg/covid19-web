@@ -35,7 +35,7 @@ class AlnImportView(LoginRequiredMixin,SingleTableView):
             form = AlnImportForm(self.request.POST, self.request.FILES)
             if form.is_valid():
                 form.instance.user = self.request.user
-                form.instance.version = ImportJob.objects.filter(name=form.instance.name).version + 1
+                form.instance.version = ImportJob.objects.filter(name=form.instance.name).count() + 1
 
                 form.save()
                 transaction.on_commit(lambda: process_msa.delay(form.instance.import_job_id))
