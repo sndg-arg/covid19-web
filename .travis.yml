@@ -13,5 +13,7 @@ python:
   - "3.7"
 install:
   - pip install -r requirements/local.txt
+env:
+  - DATABASE_URL=sqlite:////tmp/my-tmp-sqlite.db
 script:
   - "pytest"

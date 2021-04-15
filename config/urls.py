@@ -7,11 +7,10 @@ from django.views import defaults as default_views
 from django.views.generic import TemplateView
 
 def dojo_fix(request):
-    print("dfklgjsdf")
-    r = HttpResponse( content_type='image/gif')
-    with open(settings.STATIC_ROOT + "/jbrowse/dist/dojo/resources/blank.gif") as h:
-        r.write(h.read())
-    return r
+
+    with open(settings.STATIC_ROOT + "/jbrowse/dist/dojo/resources/blank.gif",'rb') as h:
+        data =h.read()
+    return HttpResponse(data, content_type='image/gif')
 
 urlpatterns = [
     # Django Admin, use {% url 'admin:index' %}
