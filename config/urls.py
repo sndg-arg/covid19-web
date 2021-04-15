@@ -1,11 +1,17 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.http import HttpResponse
 from django.urls import include, path
 from django.views import defaults as default_views
 from django.views.generic import TemplateView
 
-
+def dojo_fix(request):
+    print("dfklgjsdf")
+    r = HttpResponse( content_type='image/gif')
+    with open(settings.STATIC_ROOT + "/jbrowse/dist/dojo/resources/blank.gif") as h:
+        r.write(h.read())
+    return r
 
 urlpatterns = [
     # Django Admin, use {% url 'admin:index' %}
@@ -17,6 +23,7 @@ urlpatterns = [
     path(r'^i18n/', include('django.conf.urls.i18n')),
     path('', include('sndg_covid19.urls', namespace="covid")),
     path('', include('pdbdb.urls', namespace="pdbdb")),
+    path("dist/dojo/resources/blank.gif", dojo_fix ,name="dojo_fix"),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 
