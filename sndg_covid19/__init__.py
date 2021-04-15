@@ -5,4 +5,4 @@ __version_info__ = tuple(
         for num in __version__.replace("-", ".", 1).split(".")
     ]
 )
-
+default_app_config = 'sndg_covid19.apps.CovidConfig'

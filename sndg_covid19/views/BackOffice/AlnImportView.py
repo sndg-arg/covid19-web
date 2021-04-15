@@ -11,7 +11,7 @@ from sndg_covid19.tasks import process_msa
 
 
 from sndg_covid19.models import ImportJob
-
+from django.shortcuts import redirect
 
 class AlnImportView(LoginRequiredMixin,SingleTableView):
     # PermissionRequiredMixin permission_required = 'polls.add_choice'
@@ -26,7 +26,8 @@ class AlnImportView(LoginRequiredMixin,SingleTableView):
         return self.kwargs.get('page_size', 10)
 
     def post(self, request, **kwargs):
-        return self.get(request, **kwargs)
+        self.get(request, **kwargs)
+        return redirect("covid:aln_import")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -40,6 +41,7 @@ class AlnImportView(LoginRequiredMixin,SingleTableView):
                 form.save()
                 transaction.on_commit(lambda: process_msa.delay(form.instance.import_job_id))
                 messages.add_message(self.request, messages.INFO, _(f"Procesando {form.instance.name} ... "))
+
                 context["form"] = AlnImportForm(initial={'aln_type': 'spike'})
             else:
                 context["form"] = form

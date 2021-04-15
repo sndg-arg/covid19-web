@@ -16,7 +16,6 @@ RUN apt-get update \
 
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app/
-ENV algo 1
 COPY . .
 
 RUN curl https://raw.githubusercontent.com/creationix/nvm/v0.25.0/install.sh | bash

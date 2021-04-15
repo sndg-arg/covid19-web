@@ -86,11 +86,12 @@ THIRD_PARTY_APPS = [
 ]
 
 LOCAL_APPS = [
+    "sndg_covid19",
     "sndg_covid19.users.apps.UsersConfig",
     # Your stuff: custom apps go here
     "bioseq",
     "pdbdb",
-    "sndg_covid19"
+
 ]
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -320,4 +321,4 @@ STATICFILES_DIRS = STATICFILES_DIRS + [("jbrowse", SNDG_JBROWSE), ]
 SECURE_CONTENT_TYPE_NOSNIFF = False
 
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
-UPLOAD_ROOT = env("UPLOAD_ROOT", default=ROOT_DIR / "uploads")
+UPLOAD_ROOT = env("DJANGO_UPLOAD_ROOT", default=ROOT_DIR / "uploads")

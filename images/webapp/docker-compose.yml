@@ -8,7 +8,6 @@ services:
       - POSTGRES_DB=covid
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=123
-      - DJANGO_CSRF_TRUSTED_ORIGINS=localhost
     volumes:
       - ../../data/sndgr:/var/lib/postgresql/data
     ports:
@@ -23,6 +22,35 @@ services:
       - main
     restart: on-failure
     shm_size: '512m'
+  covid19-worker:
+    build:
+      context: ../../
+      dockerfile: ./images/webapp/Dockerfile-worker
+    command: sh -c 'celery -A config worker -l INFO'
+    networks:
+      - main
+    environment:
+      - DATABASE_URL=postgres://postgres:123@db:5432/covid
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - DJANGO_SETTINGS_MODULE=config.settings.production
+      - DJANGO_EMAIL_CONFIG=consolemail://
+      - SNDG_JBROWSE=data/jbrowse
+      - CELERY_TASK_ALWAYS_EAGER=False
+      - DJANGO_SECRET_KEY=my09liz&&z*%fi!!c6*440_1z7qyhz8u5+efi_af6_%*adl+5j
+      - DJANGO_DEBUG=False
+      - READ_DOT_ENV_FILE=False
+      - STATIC_ROOT=/data/static
+      - STATIC_URL=/static/
+      - REDIS_URL=redis://redis:6379/0
+      - DJANGO_ADMIN_URL=/admin/
+      - SENTRY_DSN=https://ba553cf9f7804008978d6327b8e19f42@o265526.ingest.sentry.io/1469026
+      - DJANGO_ALLOWED_HOSTS=localhost
+      - DJANGO_SECURE_SSL_REDIRECT=False
+      - DJANGO_CSRF_TRUSTED_ORIGINS=localhost
+      #/celery/uploads/uploads/aln_test.fasta_y6Qeybr.zip
+      - DJANGO_UPLOAD_ROOT=/uploads/
+    volumes:
+      - ../../sndg_covid19/static/uploads/:/uploads/
   covid19-web:
     build:
       context: ../../
@@ -33,19 +61,22 @@ services:
       - DATABASE_URL=postgres://postgres:123@db:5432/covid
       - CELERY_BROKER_URL=redis://redis:6379/0
       - DJANGO_SETTINGS_MODULE=config.settings.production
-      - EMAIL_CONFIG=consolemail://
+      - DJANGO_EMAIL_CONFIG=consolemail://
       - SNDG_JBROWSE=data/jbrowse
       - CELERY_TASK_ALWAYS_EAGER=False
       - DJANGO_SECRET_KEY=my09liz&&z*%fi!!c6*440_1z7qyhz8u5+efi_af6_%*adl+5j
-      - DJANGO_DEBUG=False
+      - DJANGO_DEBUG=True
       - READ_DOT_ENV_FILE=False
       - STATIC_ROOT=/data/static
       - STATIC_URL=/static/
       - REDIS_URL=redis://redis:6379/0
-      - DJANGO_ADMIN_URL="/admin/"
+      - DJANGO_ADMIN_URL=admin/
       - SENTRY_DSN=https://ba553cf9f7804008978d6327b8e19f42@o265526.ingest.sentry.io/1469026
       - DJANGO_ALLOWED_HOSTS=localhost
       - DJANGO_SECURE_SSL_REDIRECT=False
+      - DJANGO_CSRF_TRUSTED_ORIGINS=localhost
+      - DJANGO_UPLOAD_ROOT=/data/static/uploads/
+
     networks:
       - main
     ports:
