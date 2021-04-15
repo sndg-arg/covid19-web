@@ -139,7 +139,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/dev/ref/settings/#middleware
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",
+    # "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -153,9 +153,9 @@ MIDDLEWARE = [
 # STATIC
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#static-root
-STATIC_ROOT = str(ROOT_DIR / "data/static")
+STATIC_ROOT = env("STATIC_ROOT",default= str(ROOT_DIR / "data/static"))
 # https://docs.djangoproject.com/en/dev/ref/settings/#static-url
-STATIC_URL = "/static/"
+STATIC_URL = env("STATIC_URL",default= "/static/")
 # https://docs.djangoproject.com/en/dev/ref/contrib/staticfiles/#std:setting-STATICFILES_DIRS
 STATICFILES_DIRS = [str(APPS_DIR / "static")]
 # https://docs.djangoproject.com/en/dev/ref/contrib/staticfiles/#staticfiles-finders
@@ -167,9 +167,9 @@ STATICFILES_FINDERS = [
 # MEDIA
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#media-root
-MEDIA_ROOT = str(APPS_DIR / "media")
+MEDIA_ROOT = env("MEDIA_ROOT", default=str(APPS_DIR / "media"))
 # https://docs.djangoproject.com/en/dev/ref/settings/#media-url
-MEDIA_URL = "/media/"
+MEDIA_URL = env("MEDIA_URL",default="/media/")
 
 # TEMPLATES
 # ------------------------------------------------------------------------------
@@ -237,7 +237,7 @@ EMAIL_TIMEOUT = 5
 # ADMIN
 # ------------------------------------------------------------------------------
 # Django Admin URL.
-ADMIN_URL = "admin/"
+
 # https://docs.djangoproject.com/en/dev/ref/settings/#admins
 ADMINS = [("""Ezequiel Sosa""", "ezequieljsosa@gmail.com")]
 # https://docs.djangoproject.com/en/dev/ref/settings/#managers
@@ -284,10 +284,10 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 # http://docs.celeryproject.org/en/latest/userguide/configuration.html#task-time-limit
 # TODO: set to whatever value is adequate in your circumstances
-CELERY_TASK_TIME_LIMIT = 5 * 60
+CELERY_TASK_TIME_LIMIT = env.int("CELERY_TASK_TIME_LIMIT",default=5 * 60)
 # http://docs.celeryproject.org/en/latest/userguide/configuration.html#task-soft-time-limit
 # TODO: set to whatever value is adequate in your circumstances
-CELERY_TASK_SOFT_TIME_LIMIT = 60
+CELERY_TASK_SOFT_TIME_LIMIT = CELERY_TASK_TIME_LIMIT + 120
 # http://docs.celeryproject.org/en/latest/userguide/configuration.html#beat-scheduler
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 
@@ -301,7 +301,7 @@ CELERY_TASK_EAGER_PROPAGATES = env.bool("CELERY_TASK_EAGER_PROPAGATES",True)
 # ------------------------------------------------------------------------------
 ACCOUNT_ALLOW_REGISTRATION = env.bool("DJANGO_ACCOUNT_ALLOW_REGISTRATION", True)
 # https://django-allauth.readthedocs.io/en/latest/configuration.html
-ACCOUNT_AUTHENTICATION_METHOD = "username"
+ACCOUNT_AUTHENTICATION_METHOD = "username_email"
 # https://django-allauth.readthedocs.io/en/latest/configuration.html
 ACCOUNT_EMAIL_REQUIRED = True
 # https://django-allauth.readthedocs.io/en/latest/configuration.html
@@ -313,10 +313,10 @@ SOCIALACCOUNT_ADAPTER = "sndg_covid19.users.adapters.SocialAccountAdapter"
 
 # Your stuff...
 # ------------------------------------------------------------------------------
-SNDG_JBROWSE = os.path.join(str(ROOT_DIR), env('SNDG_JBROWSE', default="data/jbrowse"))
+SNDG_JBROWSE = env('SNDG_JBROWSE',   default=os.path.join(str(ROOT_DIR) + "data/jbrowse"))
 STATICFILES_DIRS = STATICFILES_DIRS + [("jbrowse", SNDG_JBROWSE), ]
 
 SECURE_CONTENT_TYPE_NOSNIFF = False
 
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
-UPLOAD_ROOT = ROOT_DIR / "uploads"
+UPLOAD_ROOT = env("UPLOAD_ROOT", default=ROOT_DIR / "uploads")

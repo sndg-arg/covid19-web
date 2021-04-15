@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  db:
+    restart: on-failure
+    image: postgres:11
+    environment:
+      - POSTGRES_DB=covid
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=123
+    volumes:
+      - ../../data/sndgr:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - main
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    networks:
+      - main
+    restart: on-failure
+    shm_size: '512m'
+  covid19-web:
+    build:
+      context: ../../
+      dockerfile: ./images/webapp/Dockerfile-web
+      #sh -c "python manage.py collectstatic --no-input && python manage.py migrate && gunicorn config.wsgi --preload -b 0.0.0.0:8000"
+    command: sh -c 'gunicorn config.wsgi --preload -b 0.0.0.0:8000;'
+    environment:
+      - DATABASE_URL=postgres://postgres:123@db:5432/covid
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - DJANGO_SETTINGS_MODULE=config.settings.production
+      - EMAIL_CONFIG=consolemail://
+      - SNDG_JBROWSE=data/jbrowse
+      - CELERY_TASK_ALWAYS_EAGER=False
+      - DJANGO_SECRET_KEY=my09liz&&z*%fi!!c6*440_1z7qyhz8u5+efi_af6_%*adl+5j
+      - DJANGO_DEBUG=False
+      - READ_DOT_ENV_FILE=False
+      - STATIC_ROOT=/data/static
+      - STATIC_URL=/static/
+      - REDIS_URL=redis://redis:6379/0
+      - DJANGO_ADMIN_URL="/admin/"
+      - SENTRY_DSN=https://ba553cf9f7804008978d6327b8e19f42@o265526.ingest.sentry.io/1469026
+      - DJANGO_ALLOWED_HOSTS=localhost
+      - DJANGO_SECURE_SSL_REDIRECT=False
+    networks:
+      - main
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - ../../sndg_covid19/static:/data/static
+      - ../../data/jbrowse/:/usr/src/app/data/jbrowse
+  nginx:
+    command: nginx -g "daemon off;"
+    depends_on:
+      - covid19-web
+    image: nginx:alpine
+    networks:
+      - main
+    ports:
+      - "8080:80"
+    restart: on-failure
+    volumes:
+      - ${PWD}/nginx.conf:/etc/nginx/nginx.conf
+      - ../../sndg_covid19/static:/var/www/app/static
+
+networks:
+  main:
