@@ -104,7 +104,7 @@ ADMIN_URL = env("DJANGO_ADMIN_URL")
 # Anymail
 # ------------------------------------------------------------------------------
 # https://anymail.readthedocs.io/en/stable/installation/#installing-anymail
-INSTALLED_APPS += ["anymail"]  # noqa F405
+# INSTALLED_APPS += ["anymail"]  # noqa F405
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
 # https://anymail.readthedocs.io/en/stable/installation/#anymail-settings-reference
 # https://anymail.readthedocs.io/en/stable/esps
@@ -167,3 +167,5 @@ sentry_sdk.init(
 # Your stuff...
 # ------------------------------------------------------------------------------
 SESSION_COOKIE_SECURE = True
+EMAIL_CONFIG = env.email_url( 'DJANGO_EMAIL_CONFIG')
+vars().update(EMAIL_CONFIG)
