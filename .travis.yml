@@ -14,6 +14,8 @@ python:
 install:
   - pip install -r requirements/local.txt
 env:
-  - DATABASE_URL=sqlite:////tmp/my-tmp-sqlite.db
+  - DJANGO_DEBUG=True
+  - DJANGO_SETTINGS_MODULE=config.settings.test
+  - CELERY_TASK_ALWAYS_EAGER=True
 script:
   - "pytest"
