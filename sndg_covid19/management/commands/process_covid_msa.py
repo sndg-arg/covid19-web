@@ -157,6 +157,7 @@ class Command(BaseCommand):
                     err = f'{r.id} does not have the correct format. Ex: hCoV-19/Wuhan/WIV04/2019|EPI_ISL_402124|2019-12-30'
                     raise CommandError(err)
                 r.id = rid.split("/")[1]
+                Sample.objects.filter(name=r.id).delete()
                 sample = Sample.objects.get_or_create(name=r.id, date=sdate, gisaid="", country=country)[0]
                 assert desc
                 sample.subdivision = desc
