@@ -148,15 +148,16 @@ class Command(BaseCommand):
             if r.id != ref_seq:
                 try:
                     rid = r.id.replace("hCoV-19/", "")
-                    code, gisaid, sdate = rid.split("|")[:3]
-                    country = country_from_gisaid(r.id)
+                    rid = rid.replace("//","/")
+                    code,  sdate = rid.split("|")[:2]
+                    country = code.split("/")[0]
                     sdate = datetime.strptime(sdate.split("_")[0], '%Y-%m-%d').date()
                 except Exception:
                     traceback.print_exc(file=self.stderr)
                     err = f'{r.id} does not have the correct format. Ex: hCoV-19/Wuhan/WIV04/2019|EPI_ISL_402124|2019-12-30'
                     raise CommandError(err)
-                r.id = code.split("/")[-2]
-                sample = Sample.objects.get_or_create(name=r.id, date=sdate, gisaid=gisaid, country=country)[0]
+                r.id = rid.split("/")[1]
+                sample = Sample.objects.get_or_create(name=r.id, date=sdate, gisaid="", country=country)[0]
                 assert desc
                 sample.subdivision = desc
                 sample.save()

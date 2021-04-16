@@ -1,6 +1,7 @@
 import gzip
 import io
 import re
+import os
 import zipfile
 from datetime import datetime
 
@@ -60,7 +61,7 @@ class CovidIO:
         if job.aln_type == "spike":
             ref_name = "S"
 
-            result = CovidIO.validate_import_spike(seqs, job.csv.path, ref_name)
+            result = CovidIO.validate_import(seqs, job.csv.path, ref_name,"^PAIS-S-[A-Z]\d{4}$")
 
             if not result["errors"]:
                 for r in seqs.values():
@@ -79,14 +80,39 @@ class CovidIO:
             else:
                 raise JobValidationError("\n".join(result["errors"]), result["errores_detallados"])
         else:
-            ref_name = "MN908947.3"
-            management.call_command("process_covid_msa",
-                                    reference=ref_name, input_msa=h,
-                                    # outdir_msa=f'{settings.ROOT_DIR}/{alnjobid}.msa',
-                                    precompute_graphics=False, override=True, remove=False)
+
+            ref_name = "MN996528.1" #"MN908947.3" ?
+
+            result = CovidIO.validate_import(seqs, job.csv.path, ref_name,"^PAIS-[A-Z]\d{4}$")
+
+            if not result["errors"]:
+                for r in seqs.values():
+                    seqid = r.id
+                    if seqid != ref_name:
+                        rdata = result["data"][seqid]
+                        #hCoV-19/Argentina/PAIS-A0001/2020|-|2020-03-01|SouthAmerica CABA
+                        year = rdata['date'].split('-')[0]
+                        r.id = f"hCoV-19/Argentina//{seqid}/{year}|{rdata['date']}|SouthAmerica"
+                        r.description = rdata["geo"]
+                with gzip.open(job.fasta.path.replace(".zip", "_fixed.fasta.gz"), 'wt') as h:
+                    bpio.write(seqs.values(), h, "fasta")
+
+                job.status_desc = f"procesando {len(seqs)} secuencias"
+                job.status = "processing"
+                job.save()
+                CovidIO.process_import_msa(job, seqs, ref_name)
+
+
+
+
+
+            else:
+                raise JobValidationError("\n".join(result["errors"]), result["errores_detallados"])
+
+
 
     @staticmethod
-    def validate_import_spike(seqs, csv, ref_name):
+    def validate_import(seqs, csv, ref_name,name_regex):
         result = {"errors": [], "data": {}}
         errores_detallados = []
         result["errores_detallados"] = errores_detallados
@@ -99,7 +125,7 @@ class CovidIO:
         if ref_name not in seqs:
             result["errors"].append(f"la referencia {ref_name} no esta en el alineamiento")
         for seq in seqs.values():
-            if re.match("^PAIS-S-[A-Z]\d{4}$", seq.id):
+            if re.match(name_regex, seq.id):
                 ids_validos.append(seq.id)
             elif ref_name == seq.id:
                 pass
@@ -123,7 +149,7 @@ class CovidIO:
             else:
                 cod, sample_date, geo = [x.strip() for x in vec[:3]]
                 result["data"][cod] = {"geo": geo, "date": sample_date}
-                if not re.match("^PAIS-S-[A-Z]\d{4}$", cod):
+                if not re.match(name_regex, cod):
                     error_csv_codigo.append(f'{idx} {cod}')
                 else:
                     csv_valid_cod.append(cod)
@@ -133,6 +159,7 @@ class CovidIO:
                     error_csv_fecha.append(f'{idx} {sample_date}')
                 if geo not in CovidIO.valid_subdivitions:
                     error_csv_geo.append(f'{idx} {geo}')
+
         if error_csv_sin_campos:
             result["errors"].append(f"hay {len(error_csv_sin_campos)} lineas en el csv que no tienen 3 campos")
             for x in error_csv_sin_campos:
@@ -149,6 +176,24 @@ class CovidIO:
             result["errors"].append(f"hay {len(error_csv_geo)} lineas que tienen mal la ubicación")
             for x in error_csv_geo:
                 errores_detallados.append(f"error_csv_geo: {x}")
+
+
+
+
+        diff = set(ids_validos) - set(csv_valid_cod)
+        if diff:
+            msg = "hay códigos fasta que estan en el fasta y no estan en el csv"
+            result["errors"].append(msg)
+            result["errores_detallados"].append(msg + ": " + ",".join(diff))
+        diff = set(csv_valid_cod) - set(ids_validos)
+        if diff:
+            msg = "hay códigos fasta que estan en el csv y que no estan en el fasta"
+            result["errors"].append(msg)
+            result["errores_detallados"].append(msg + ": " + ",".join(diff))
+
+        return result
+
+
 
 
 
@@ -195,6 +240,29 @@ class CovidIO:
                                 reference=ref_name, input_msa=aln_faa_path,
                                 # outdir_msa=f'{settings.ROOT_DIR}/{alnjobid}.msa',
                                 precompute_graphics=False)
+
+    @staticmethod
+    def process_import_msa( job, seqs, ref_name):
+        aln_fna_path = job.fasta.path.replace(".zip", ".fna")
+        with open(aln_fna_path, "w") as h_fna:
+            ref = seqs[ref_name]
+            for sseq in seqs.values():
+                if sseq.id != ref_name:
+                    seq_id = sseq.id
+                    sseq.id = seq_id
+                    sseq.description = sseq.description
+                    bpio.write(sseq, h_fna, "fasta")
+                else:
+                    bpio.write(sseq, h_fna, "fasta")
+        outdir = os.path.dirname(aln_fna_path) + "/" + str(job.import_job_id) + "/"
+        os.mkdir(outdir)
+        management.call_command("process_covid_msa",
+                                    reference=ref_name, input_msa=aln_fna_path,
+                                    outdir_msa=outdir ,
+                                    precompute_graphics=False, override=True, remove=False)
+
+
+
 
     @staticmethod
     def load_unip_data(protein_map, covid_biodb, dbx_dict):
@@ -284,3 +352,4 @@ class CovidIO:
                 if products:
                     prot.name = products
                 prot.save()
+

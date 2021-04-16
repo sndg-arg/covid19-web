@@ -42,7 +42,7 @@ class AlnImportView(LoginRequiredMixin,SingleTableView):
                 transaction.on_commit(lambda: process_msa.delay(form.instance.import_job_id))
                 messages.add_message(self.request, messages.INFO, _(f"Procesando {form.instance.name} ... "))
 
-                context["form"] = AlnImportForm(initial={'aln_type': 'spike'})
+                context["form"] = AlnImportForm(initial={'aln_type':form.instance.aln_type})
             else:
                 context["form"] = form
         else:

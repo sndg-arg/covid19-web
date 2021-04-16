@@ -14,6 +14,6 @@ python:
 install:
   - pip install -r requirements/local.txt
 env:
-  - DJANGO_DEBUG=True DJANGO_SETTINGS_MODULE=config.settings.test CELERY_TASK_ALWAYS_EAGER=True DATABASE_URL="" CELERY_BROKER_URL=""
+  - DJANGO_DEBUG=True DJANGO_SETTINGS_MODULE=config.settings.test CELERY_TASK_ALWAYS_EAGER=True DATABASE_URL="sqlite:////tmp/my-tmp-sqlite.db" CELERY_BROKER_URL="redis://localhost:6379/0"
 script:
   - "pytest"
