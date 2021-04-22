@@ -26,12 +26,16 @@ class AlnImportView(LoginRequiredMixin,SingleTableView):
         return self.kwargs.get('page_size', 10)
 
     def post(self, request, **kwargs):
-        self.get(request, **kwargs)
-        return redirect("covid:aln_import")
+        response = self.get(request, **kwargs)
+        if not self.upload_error:
+            return redirect("covid:aln_import")
+        else:
+            return response
+
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-
+        self.upload_error = False
         if self.request.method == "POST":
             form = AlnImportForm(self.request.POST, self.request.FILES)
             if form.is_valid():
@@ -45,6 +49,7 @@ class AlnImportView(LoginRequiredMixin,SingleTableView):
                 context["form"] = AlnImportForm(initial={'aln_type':form.instance.aln_type})
             else:
                 context["form"] = form
+                self.upload_error = True
         else:
             context["form"] = AlnImportForm(initial={'aln_type': 'spike'})
 

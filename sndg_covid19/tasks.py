@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 
 from config import celery_app
 from sndg_covid19.bioio.JobValidationError import JobValidationError
+from .bioio.EncodingUtils import EncodingUtils
 
 User = get_user_model()
 
@@ -27,7 +28,7 @@ from sndg_covid19.bioio import country_from_gisaid
 from sndg_covid19.bioio.CovidIO import CovidIO
 import numpy as np
 from dateutil.relativedelta import relativedelta
-
+import sys
 
 def autolabel(ax, y):
     for i, v in enumerate(y):
@@ -52,6 +53,7 @@ def process_msa(alnjobid: int):
         job.debug_status_desc = traceback.format_exc()
         job.status = "error"
         job.status_desc = "Error desconocido"
+        sys.err.write(job.debug_status_desc)
     job.save()
 
 

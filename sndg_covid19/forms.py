@@ -3,7 +3,7 @@ from django import forms
 from django.utils.translation import gettext as _
 import zipfile
 from .models import ImportJob
-
+from .bioio.EncodingUtils import EncodingUtils
 
 # class OverflowTemplateColumn(tables.TemplateColumn):
 #     def render(self, record, table, value, bound_column, **kwargs):
@@ -46,7 +46,7 @@ class AlnImportForm(forms.ModelForm):
         fasta = self.cleaned_data.get('fasta')
         csv = self.cleaned_data.get('csv')
 
-        if not fasta.name.endswith("fasta.zip") :
+        if not fasta.name.lower().endswith("fasta.zip") :
             self._errors['fasta'] = self.error_class([
                 'el archivo de secuencias debe ser un fasta comprimido'])
             try:
@@ -56,9 +56,11 @@ class AlnImportForm(forms.ModelForm):
                     f'{fasta.name} not esta comprimido'])
 
 
-        if not csv.name.endswith("csv") :
+        if not csv.name.lower().endswith("csv") :
             self._errors['csv'] = self.error_class([
                 'el archivo de propiedades debe ser un csv'])
+
+
 
 
 

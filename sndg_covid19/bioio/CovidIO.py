@@ -17,6 +17,7 @@ from bioseq.models.Location import Location
 from bioseq.models.Ontology import Ontology
 from bioseq.models.Seqfeature import Seqfeature, SeqfeatureQualifierValue
 from bioseq.models.Term import Term, TermDbxref
+from sndg_covid19.bioio.EncodingUtils import EncodingUtils
 from sndg_covid19.bioio.JobValidationError import JobValidationError
 from sndg_covid19.models import ImportJob
 
@@ -102,10 +103,6 @@ class CovidIO:
                 job.save()
                 CovidIO.process_import_msa(job, seqs, ref_name)
 
-
-
-
-
             else:
                 raise JobValidationError("\n".join(result["errors"]), result["errores_detallados"])
 
@@ -115,6 +112,12 @@ class CovidIO:
     def validate_import(seqs, csv, ref_name,name_regex):
         result = {"errors": [], "data": {}}
         errores_detallados = []
+        error_csv_sin_campos = []
+        error_csv_codigo = []
+        error_csv_fecha = []
+        error_csv_geo = []
+        csv_valid_cod = []
+
         result["errores_detallados"] = errores_detallados
         if not len(seqs):
             result["errors"].append("no se detecto niguna secuencia en el fasta")
@@ -132,33 +135,34 @@ class CovidIO:
             else:
                 errores_detallados.append(f"fasta error id: {seq.id}")
                 error_ids.append(seq.id)
-        with open(csv) as h:
-            lines = h.readlines()
-        error_csv_sin_campos = []
-        error_csv_codigo = []
-        error_csv_fecha = []
-        error_csv_geo = []
-        csv_valid_cod = []
-        for idx, l in enumerate(lines[1:], start=2):
-            if not l.strip():
-                continue
-            vec = l.split(",")
-            if len(vec) < 3:
-                error_csv_sin_campos.append(str(idx))
-                result["errores_detallados"].append(f"la linea {idx} no tiene 3 campos")
-            else:
-                cod, sample_date, geo = [x.strip() for x in vec[:3]]
-                result["data"][cod] = {"geo": geo, "date": sample_date}
-                if not re.match(name_regex, cod):
-                    error_csv_codigo.append(f'{idx} {cod}')
+
+        encoding = EncodingUtils.get_encoding(csv)
+        if not encoding:
+            result["errors"].append(f'el encoding del archivo "{csv}" no es el correcto, debe ser iso-8859-1 o utf-8')
+        else:
+            with open(csv,encoding=encoding) as h:
+                lines = h.readlines()
+
+            for idx, l in enumerate(lines[1:], start=2):
+                if not l.strip():
+                    continue
+                vec = l.split(",")
+                if len(vec) < 3:
+                    error_csv_sin_campos.append(str(idx))
+                    result["errores_detallados"].append(f"la linea {idx} no tiene 3 campos")
                 else:
-                    csv_valid_cod.append(cod)
-                try:
-                    datetime.strptime(sample_date, '%Y-%m-%d')
-                except ValueError:
-                    error_csv_fecha.append(f'{idx} {sample_date}')
-                if geo not in CovidIO.valid_subdivitions:
-                    error_csv_geo.append(f'{idx} {geo}')
+                    cod, sample_date, geo = [x.strip() for x in vec[:3]]
+                    result["data"][cod] = {"geo": geo, "date": sample_date}
+                    if not re.match(name_regex, cod):
+                        error_csv_codigo.append(f'{idx} {cod}')
+                    else:
+                        csv_valid_cod.append(cod)
+                    try:
+                        datetime.strptime(sample_date, '%Y-%m-%d')
+                    except ValueError:
+                        error_csv_fecha.append(f'{idx} {sample_date}')
+                    if geo not in CovidIO.valid_subdivitions:
+                        error_csv_geo.append(f'{idx} {geo}')
 
         if error_csv_sin_campos:
             result["errors"].append(f"hay {len(error_csv_sin_campos)} lineas en el csv que no tienen 3 campos")
@@ -176,9 +180,6 @@ class CovidIO:
             result["errors"].append(f"hay {len(error_csv_geo)} lineas que tienen mal la ubicación")
             for x in error_csv_geo:
                 errores_detallados.append(f"error_csv_geo: {x}")
-
-
-
 
         diff = set(ids_validos) - set(csv_valid_cod)
         if diff:
