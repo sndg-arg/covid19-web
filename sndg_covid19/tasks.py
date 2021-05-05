@@ -53,7 +53,7 @@ def process_msa(alnjobid: int):
         job.debug_status_desc = traceback.format_exc()
         job.status = "error"
         job.status_desc = "Error desconocido"
-        sys.err.write(job.debug_status_desc)
+        sys.stderr.write(job.debug_status_desc)
     job.save()
 
 
