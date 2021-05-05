@@ -57,8 +57,11 @@ class CovidIO:
             h = io.TextIOWrapper(io.BytesIO(hzip.read()))
             try:
                 seqs = bpio.to_dict(bpio.parse(h, "fasta"))
-            except ValueError:
-                raise JobValidationError("error en el formato del archivo fasta")
+            except ValueError as ex:
+                if "Duplicate key " in str(ex):
+                    raise JobValidationError("Esta 2 veces la secuencia %s" %  str(ex).split("key ")[1])
+                else:
+                    raise JobValidationError("error en el formato del archivo fasta")
         if job.aln_type == "spike":
             ref_name = "S"
 
