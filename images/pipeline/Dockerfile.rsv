@@ -1,0 +1,37 @@
+FROM sndg/covid19:org
+
+USER root
+
+COPY resources/process_sample.sh /app/script/
+COPY resources/process_batch.py /app/script/
+COPY resources/MSAMap.py /app/script/
+COPY resources/list_denovo_diffs.py /app/script/
+COPY resources/test_consensus.py /app/script/
+COPY resources/run_depth.py /app/script/
+
+COPY process_assembly.py /app/script/
+
+RUN mkdir -p /app/snpEff/data/rsv/
+COPY resources/rsv4snpeff.gb /app/snpEff/data/rsv/genes.gbk
+
+RUN echo "rsv.genome : rsv" >> /app/snpEff/snpEff.config
+RUN echo "  rsv.chromosomes : MZ515649" >> /app/snpEff/snpEff.config
+RUN cd /app/snpEff && java -jar snpEff.jar build -genbank -v rsv
+
+COPY resources/rsv.fasta /ref/rsv.fasta
+RUN makeblastdb -dbtype nucl -in /ref/rsv.fasta && bwa index /ref/rsv.fasta && samtools faidx /ref/rsv.fasta && \
+    samtools dict -o /ref/rsv.dict /ref/rsv.fasta
+
+COPY virus_utils.py /app/script/
+
+
+
+RUN chmod +x  /app/script/process_sample.sh  /app/script/process_batch.py /app/script/process_assembly.py \
+    /app/script/MSAMap.py /app/script/list_denovo_diffs.py /app/script/test_consensus.py /app/script/run_depth.py \
+    /app/script/virus_utils.py
+
+USER covid
+WORKDIR /out
+
+
+

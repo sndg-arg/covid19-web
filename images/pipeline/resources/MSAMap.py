@@ -169,7 +169,14 @@ if __name__ == '__main__':
                     acc_ref = ant_ref.upper()
                     acc_alt = (ant_ref + acc_alt).upper()
                     first_pos = str(int(first_pos) - 1)
-                line = f"{args.ref_sequence}\t{int(first_pos) + 1}\t.\t{acc_ref.upper()}\t{acc_alt}\t.\t.\t.\tGT\t{sample_gts}"
+                if acc_alt == "-":
+                    acc_alt = acc_ref[0].upper()
+                tmp_pos = int(first_pos) + 1
+                if tmp_pos == 0:
+                    tmp_pos = 1
+                    import sys
+                    sys.stderr.write("warn: first_pos corrected")
+                line = f"{args.ref_sequence}\t{tmp_pos}\t.\t{acc_ref.upper()}\t{acc_alt}\t.\t.\t.\tGT\t{sample_gts}"
                 print(line)
                 acc_ref = None
                 acc_alt = None
@@ -178,5 +185,14 @@ if __name__ == '__main__':
             acc_alt = alts_str
         pos_ant = pos
     if acc_ref:
-        line = f"{args.ref_sequence}\t{int(first_pos) + 1}\t.\t{acc_ref.upper()}\t{acc_alt}\t.\t.\t.\tGT\t{sample_gts}"
+        if acc_alt == "-":
+            acc_alt = acc_ref[0].upper()
+
+        tmp_pos = int(first_pos) + 1
+        if tmp_pos == 0:
+            tmp_pos = 1
+            import sys
+            sys.stderr.write("warn: first_pos corrected")
+
+        line = f"{args.ref_sequence}\t{tmp_pos }\t.\t{acc_ref.upper()}\t{acc_alt}\t.\t.\t.\tGT\t{sample_gts}"
         print(line)

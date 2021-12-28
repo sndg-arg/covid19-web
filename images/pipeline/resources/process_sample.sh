@@ -178,10 +178,11 @@ bcftools consensus -m "${IN2}" -f "$REFERENCE"  -o "${OUT1}.tmp1" "$IN1"
 
 result=$(python3 <<EOF
 import Bio.SeqIO as bpio
+from datetime import date
 r = bpio.read('${OUT1}.tmp1','fasta')
 r.description = ''
 r.name = ''
-r.id = 'hCoV-19/Argentina/${SAMPLE_NAME}/2020'
+r.id = 'hCoV-19/Argentina/${SAMPLE_NAME}/' + str(date.today().year)
 bpio.write(r,'${OUT1}','fasta')
 EOF
 )
@@ -201,13 +202,14 @@ OUT2=${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_assembly
 megahit -1 "$IN1" -2 "$IN2" -o "$OUT2"
 
 result=$(python3 <<EOF
+from datetime import date
 import Bio.SeqIO as bpio
 with open('${OUT2}.fna','w') as h:
   for i,r  in enumerate(bpio.parse('${OUT2}/final.contigs.fa','fasta')):
       if len(r.seq) > 300:
 #          r.description = r.des
           r.name = ''
-          r.id = 'hCoV-19/Argentina/${SAMPLE_NAME}/2020_' + str(i)
+          r.id = 'hCoV-19/Argentina/${SAMPLE_NAME}/' + str(date.today().year + '_' + str(i)
           bpio.write(r,h,'fasta')
 EOF
 )

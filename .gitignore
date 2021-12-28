@@ -387,3 +387,13 @@ uploads/
 processed/
 .idea/
 
+*.fasta.amb
+*.fasta.ann
+*.fasta.bwt
+*.fasta.fai
+*.fasta.nhr
+*.fasta.nin
+*.fasta.nsq
+*.fasta.pac
+*.fasta.sa
+

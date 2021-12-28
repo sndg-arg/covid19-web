@@ -31,3 +31,9 @@ Se le cree al variant caller a menos que:
 Se le cree al variant caller:
 * Heterocigosis: si la variante es Het con prop de alt > 60% va alt, si ref > 60% se borra la variante, sino va base ambigua
 * Homocigosis y DP >= 10 => va el alternativo sin duda
+
+# RSV
+```shell script
+docker build -t sndg/virusutils -f Dockerfile.rsv .
+docker run -it --rm -v $PWD:/out sndg/virusutils bash -c 'virus_utils.py -i results_rsv/FASTA -o results_rsv -p test_primers/primers_rsv.txt --reference /ref/rsv.fasta --annotation /app/snpEff/data/rsv/genes.gbk'
+```
