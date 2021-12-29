@@ -141,15 +141,24 @@ TMP1="/tmp/unspanning.vcf"
 TMP2="/tmp/variants.vcf"
 #  exclude variants with more than 2 alleles "INFO/AN>2"
 bcftools filter  -e '(alt="*") || (INFO/AN>2)' $IN > $TMP1
-bcftools filter  -i '(FORMAT/DP>9) && (GT="hom") && (FORMAT/AD[0:1]>FORMAT/AD[0:0])' $IN | bcftools filter -e "INFO/AN>2"  > $TMP2
+
+#Antes revisaba covertura de 10 sobre el total, ahora revisa sobre el alternativo
+#bcftools filter  -i '(FORMAT/DP>9) && (GT="hom") && (FORMAT/AD[0:1]>FORMAT/AD[0:0])' $IN | bcftools filter -e "INFO/AN>2"  > $TMP2
+bcftools filter  -i '(FORMAT/AD[0:1]>9) && (GT="hom") && (FORMAT/AD[0:1]>FORMAT/AD[0:0])' $IN | bcftools filter -e "INFO/AN>2"  > $TMP2
+
 #Remove spannig deletions
 bcftools filter -i 'alt="*"' $IN  | bcftools norm -m -any | \
          bcftools filter -e 'alt="*"'  | bcftools filter -i 'FORMAT/AD[0:1] > 9' | \
          sed  's|0/1:|1/1:|'  | sed  's|0\|1:|1/1:|' | bcftools view -H   >> $TMP2
 # VC exceptions
 ## HET prop > 60% to homo
-bcftools filter -i '(GT="het") && (FORMAT/DP>9) && (((FORMAT/AD[0:1]) / FORMAT/DP) >0.6)' $TMP1 | \
+#Antes revisaba covertura de 10 sobre el total, ahora revisa sobre el alternativo
+#bcftools filter -i '(GT="het") && (FORMAT/DP>9) && (((FORMAT/AD[0:1]) / FORMAT/DP) >0.6)' $TMP1 | \
+#  sed  's|0/1:|1/1:|'  | sed  's|0\|1:|1/1:|' | bcftools view -H   >> $TMP2
+bcftools filter -i '(GT="het") && (FORMAT/[0:1]>9) && (((FORMAT/AD[0:1]) / FORMAT/DP) >0.6)' $TMP1 | \
   sed  's|0/1:|1/1:|'  | sed  's|0\|1:|1/1:|' | bcftools view -H   >> $TMP2
+
+
 ## remove HET prop < 60% => otherwise they go to the consensus, even if GT=het
 #bcftools filter -i ' ( STRLEN(ALT)==STRLEN(REF)) && (GT="het") && (FORMAT/DP>9) && ( ((FORMAT/AD[0:1]) / (FORMAT/DP) ) <0.6) && ((FORMAT/AD[0:0]/FORMAT/DP)<0.6)' $TMP1 | \
 #  bcftools view -H   >> $TMP2
@@ -166,7 +175,7 @@ IN1=$OUT
 IN2="${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_uncovered.bed"
 OUT2="${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_uncovered2.bed"
 bcftools filter -i 'STRLEN(REF)>STRLEN(ALT)' "$IN1" | bedtools subtract -a "${RESULTS}/${SAMPLE_NAME}/${SAMPLE_NAME}_uncovered.bed"  -b - > "$OUT2"
-rm $IN2
+#rm $IN2
 
 echo "Getting consensus sequence..."
 IN1=$OUT
@@ -207,9 +216,8 @@ import Bio.SeqIO as bpio
 with open('${OUT2}.fna','w') as h:
   for i,r  in enumerate(bpio.parse('${OUT2}/final.contigs.fa','fasta')):
       if len(r.seq) > 300:
-#          r.description = r.des
-          r.name = ''
-          r.id = 'hCoV-19/Argentina/${SAMPLE_NAME}/' + str(date.today().year + '_' + str(i)
+          r.name = '';
+          r.id = 'hCoV-19/Argentina/${SAMPLE_NAME}/' + str(date.today().year) + '_' + str(i);
           bpio.write(r,h,'fasta')
 EOF
 )
