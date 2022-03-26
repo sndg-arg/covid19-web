@@ -22,7 +22,7 @@
     "ngl": "next",
     "datatables.net": "^1.10.20",
     "datatables.net-dt": "^1.10.20",
-    "minimist": ">=0.2.1",
+    "minimist": ">=1.2.6",
     "minimatch": ">=3.0.2",
     "handlebars": ">=4.3.0",
     "pivottable": ">0"
