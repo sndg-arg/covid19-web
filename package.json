@@ -10,7 +10,7 @@
     "chart.js": "^1.1.1",
     "child_process": "^1.0.2",
     "css-loader": "^3.5.2",
-    "d3": "^5.16.0",
+    "d3": "^7.6.1",
     "feature-viewer": "^0.1.44",
     "jquery": "^3.5.1",
     "msa": "^1.0.3",
